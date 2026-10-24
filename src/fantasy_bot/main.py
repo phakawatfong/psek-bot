@@ -1,21 +1,20 @@
-import os
+import sys
 
-from fantasy_bot.adapters.discord_bot import FantasyBot
-from fantasy_bot.adapters.sqlite.db import connect, migrate
-from fantasy_bot.adapters.sqlite.repository import SqliteRepository
-
-DEFAULT_SPLIT_BP = [5000, 3000, 2000]
+from fantasy_bot.bot.client import FantasyBot
+from fantasy_bot.config.settings import ConfigError, Settings
+from fantasy_bot.repositories.database import connect, migrate
+from fantasy_bot.repositories.seasons import ensure_season
 
 
 def main() -> None:
-    conn = connect(os.environ.get("DB_PATH", "bot.db"))
+    try:
+        settings = Settings.from_env()
+    except ConfigError as e:
+        sys.exit(f"Config error: {e}")
+    conn = connect(settings.db_path)
     migrate(conn)
-    repo = SqliteRepository(conn)
-    season_id = os.environ["SEASON_ID"]
-    repo.ensure_season(season_id, int(os.environ["LEAGUE_ID"]), DEFAULT_SPLIT_BP)
-    guild_id = os.environ.get("DISCORD_GUILD_ID")
-    bot = FantasyBot(repo, season_id, int(guild_id) if guild_id else None)
-    bot.run(os.environ["DISCORD_TOKEN"])
+    ensure_season(conn, settings.season_id, settings.league_id, settings.payout_split_bp)
+    FantasyBot(conn, settings.season_id, settings.guild_id).run(settings.discord_token)
 
 
 if __name__ == "__main__":

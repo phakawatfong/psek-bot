@@ -1,16 +1,13 @@
-from dataclasses import dataclass
+import sqlite3
 
-from fantasy_bot.application.ports import Repository
-from fantasy_bot.domain.payout import Settlement, settle
-
-
-@dataclass(frozen=True)
-class MoneyLine:
-    discord_user_id: int
-    settlement: Settlement
+from fantasy_bot.calculations.payout import settle
+from fantasy_bot.models import MoneyLine
+from fantasy_bot.repositories import seasons, standings
 
 
-def money_summary(repo: Repository, season_id: str) -> list[MoneyLine]:
-    users = repo.discord_user_ids(season_id)
-    settlements = settle(repo.season_standings(season_id), repo.payout_split(season_id))
+def get_money_summary(conn: sqlite3.Connection, season_id: str) -> list[MoneyLine]:
+    users = standings.discord_user_ids(conn, season_id)
+    settlements = settle(
+        standings.season_standings(conn, season_id), seasons.payout_split(conn, season_id)
+    )
     return [MoneyLine(users[s.participant_id], s) for s in settlements]

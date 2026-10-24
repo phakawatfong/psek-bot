@@ -22,6 +22,24 @@ Discord bot that summarizes an [NBA Fantasy](https://nbafantasy.nba.com) league 
 
 The bot creates `bot.db` on first start. Type `/money` in your server to check it responds.
 
+## Layout
+
+Imports only point down this list. Services never import `discord`, so the same data can feed
+a reply, a chart, or a scheduled post.
+
+```
+src/fantasy_bot/
+  main.py          start-up: load settings, migrate the database, start the bot
+  config/          Settings read from the environment
+  bot/             Discord: client, and one module per slash command in commands/
+  services/        one job each, e.g. money.get_money_summary; returns plain data
+  repositories/    SQL only, plus migrations/
+  calculations/    pure rules, e.g. payout.settle
+  models.py        dataclasses shared by every layer
+```
+
+`tests/` mirrors this layout.
+
 ## Develop
 
 ```bash

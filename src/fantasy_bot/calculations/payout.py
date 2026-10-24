@@ -1,30 +1,11 @@
 from collections.abc import Sequence
-from dataclasses import dataclass
 from fractions import Fraction
 from itertools import groupby
 from math import floor
-from typing import NewType
 
-ParticipantId = NewType("ParticipantId", int)
+from fantasy_bot.models import Settlement, Standing
 
 FULL_POOL_BP = 10_000
-
-
-@dataclass(frozen=True)
-class Standing:
-    participant_id: ParticipantId
-    points: int  # tenths of a fantasy point, as nbafantasy reports them
-    buy_in: int  # minor currency units
-
-
-@dataclass(frozen=True)
-class Settlement:
-    participant_id: ParticipantId
-    rank: int
-    points: int
-    buy_in: int
-    payout: int
-    net: int
 
 
 def settle(standings: Sequence[Standing], split_bp: Sequence[int]) -> list[Settlement]:

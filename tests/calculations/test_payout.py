@@ -1,6 +1,7 @@
 import pytest
 
-from fantasy_bot.domain.payout import ParticipantId, Standing, settle
+from fantasy_bot.calculations.payout import settle
+from fantasy_bot.models import ParticipantId, Standing
 
 SPLIT = [5000, 3000, 2000]
 

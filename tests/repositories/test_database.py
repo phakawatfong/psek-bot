@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from fantasy_bot.adapters.sqlite.db import connect, migrate
+from fantasy_bot.repositories.database import connect, migrate
 
 
 def user_version(conn: sqlite3.Connection) -> int:
