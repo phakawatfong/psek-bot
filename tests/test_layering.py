@@ -8,7 +8,8 @@ ALLOWED = {
     "models": set(),
     "calculations": {"models"},
     "repositories": {"models"},
-    "services": {"models", "calculations", "repositories"},
+    "clients": {"models"},
+    "services": {"models", "calculations", "repositories", "clients"},
     "bot": {"models", "services"},
     "config": set(),
 }

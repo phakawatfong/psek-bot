@@ -8,6 +8,7 @@ authors = [
 ]
 requires-python = ">=3.13"
 dependencies = [
+    "aiohttp>=3.9",
     "discord-py>=2.4",
     "nba-api>=1.12.0",
 ]

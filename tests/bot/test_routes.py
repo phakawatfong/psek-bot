@@ -1,0 +1,12 @@
+import sqlite3
+
+import discord
+from discord import app_commands
+
+from fantasy_bot.bot.commands import register_all
+
+
+def test_every_command_is_prefixed_with_bot_name(conn: sqlite3.Connection) -> None:
+    tree = app_commands.CommandTree(discord.Client(intents=discord.Intents.none()))
+    register_all(tree, conn, "2026-27")
+    assert [c.name for c in tree.get_commands()] == ["psek-nba-money"]

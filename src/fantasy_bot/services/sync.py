@@ -1,0 +1,127 @@
+"""Copy nbafantasy data for the tracked entries into SQLite.
+
+A sync only fetches what can still change or is still missing: games and stats for days
+nbafantasy hasn't marked data_checked, and picks for each entry-day not stored yet (for
+example, a friend who registers mid-season).
+"""
+
+import logging
+import sqlite3
+from collections.abc import Awaitable, Callable
+from contextlib import suppress
+from datetime import UTC, datetime
+from typing import Any
+
+from fantasy_bot.clients import nbafantasy as api
+from fantasy_bot.models import Day, Entry, SyncResult
+from fantasy_bot.repositories import sync as repo
+
+Fetch = Callable[[str], Awaitable[Any]]
+
+log = logging.getLogger(__name__)
+
+
+async def sync_now(conn: sqlite3.Connection, season_id: str) -> SyncResult:
+    async with api.open_client() as client:
+        return await sync_season(conn, client.fetch, season_id, datetime.now(UTC))
+
+
+async def sync_season(
+    conn: sqlite3.Connection, fetch: Fetch, season_id: str, now: datetime
+) -> SyncResult:
+    run_id = repo.start_sync_run(conn, season_id, now.isoformat())
+    try:
+        result = await _sync(conn, fetch, season_id, now)
+    except Exception as e:
+        repo.finish_sync_run(conn, run_id, datetime.now(UTC).isoformat(), None, repr(e))
+        raise
+    repo.finish_sync_run(conn, run_id, datetime.now(UTC).isoformat(), len(result.days_synced))
+    return result
+
+
+async def _sync(
+    conn: sqlite3.Connection, fetch: Fetch, season_id: str, now: datetime
+) -> SyncResult:
+    stamp = now.isoformat()
+    boot_raw = await fetch(api.bootstrap_path())
+    boot = api.parse_bootstrap(boot_raw)
+    entries = await _fetch_entries(fetch, repo.tracked_entry_ids(conn, season_id))
+
+    with conn:
+        repo.save_raw(conn, season_id, api.bootstrap_path(), boot_raw, stamp)
+        repo.upsert_teams(conn, season_id, boot.teams)
+        repo.upsert_players(conn, season_id, boot.players)
+        repo.upsert_days(conn, season_id, boot.days)
+        repo.upsert_entries(conn, season_id, entries)
+
+    final = repo.final_day_ids(conn, season_id)
+    stored = repo.synced_entry_days(conn, season_id)
+    synced: list[Day] = []
+    for day in (d for d in boot.days if _started(d, now)):
+        refresh_day = day.day_id not in final
+        entry_ids = [
+            e.entry_id
+            for e in entries
+            if e.started_day <= day.day_id
+            and (refresh_day or (e.entry_id, day.day_id) not in stored)
+        ]
+        if refresh_day or entry_ids:
+            await _sync_day(conn, fetch, season_id, day, entry_ids, refresh_day, stamp)
+            synced.append(day)
+
+    mismatches = repo.reconcile_mismatches(
+        conn, season_id, [d.day_id for d in synced if d.data_checked]
+    )
+    for m in mismatches:
+        log.warning("entry %s day %s: official %s, rebuilt %s", *vars(m).values())
+    return SyncResult([d.day_id for d in synced], len(entries), mismatches)
+
+
+async def _fetch_entries(fetch: Fetch, entry_ids: list[int]) -> list[Entry]:
+    entries = []
+    for entry_id in entry_ids:
+        try:
+            entries.append(api.parse_entry(await fetch(api.entry_path(entry_id))))
+        except api.NotFound:
+            log.warning("entry %s does not exist on nbafantasy; skipping it", entry_id)
+    return entries
+
+
+async def _sync_day(
+    conn: sqlite3.Connection,
+    fetch: Fetch,
+    season_id: str,
+    day: Day,
+    entry_ids: list[int],
+    refresh_day: bool,
+    stamp: str,
+) -> None:
+    """Fetch picks for `entry_ids`, plus the day's games and stats when `refresh_day`."""
+    day_raw = (
+        (await fetch(api.fixtures_path(day.day_id)), await fetch(api.live_path(day.day_id)))
+        if refresh_day
+        else None
+    )
+    picks_raw: dict[int, Any] = {}
+    for entry_id in entry_ids:
+        with suppress(api.NotFound):  # nbafantasy has no picks for this entry on this day
+            picks_raw[entry_id] = await fetch(api.picks_path(entry_id, day.day_id))
+
+    with conn:  # one transaction per day: a failed fetch never leaves a half-written day
+        if day_raw:
+            fixtures_raw, live_raw = day_raw
+            repo.save_raw(conn, season_id, api.fixtures_path(day.day_id), fixtures_raw, stamp)
+            repo.save_raw(conn, season_id, api.live_path(day.day_id), live_raw, stamp)
+            repo.upsert_fixtures(conn, season_id, api.parse_fixtures(fixtures_raw))
+            repo.replace_day_stats(conn, season_id, day.day_id, api.parse_live(live_raw))
+            if day.data_checked:
+                repo.mark_day_final(conn, season_id, day.day_id)
+        for entry_id, raw in picks_raw.items():
+            repo.save_raw(conn, season_id, api.picks_path(entry_id, day.day_id), raw, stamp)
+            entry_day, picks = api.parse_picks(raw, entry_id, day.day_id)
+            repo.upsert_entry_day(conn, season_id, entry_day)
+            repo.replace_picks(conn, season_id, entry_id, day.day_id, picks)
+
+
+def _started(day: Day, now: datetime) -> bool:
+    return datetime.fromisoformat(day.deadline_time) <= now

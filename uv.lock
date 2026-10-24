@@ -437,6 +437,7 @@ name = "fantasy-bot"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "aiohttp" },
     { name = "discord-py" },
     { name = "nba-api" },
 ]
@@ -450,6 +451,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "aiohttp", specifier = ">=3.9" },
     { name = "discord-py", specifier = ">=2.4" },
     { name = "nba-api", specifier = ">=1.12.0" },
 ]

@@ -20,7 +20,40 @@ Discord bot that summarizes an [NBA Fantasy](https://nbafantasy.nba.com) league 
    uv run --env-file .env fantasy-bot
    ```
 
-The bot creates `bot.db` on first start. Type `/money` in your server to check it responds.
+The bot creates `bot.db` on first start. Type `/psek-nba-money` in your server to check it responds.
+
+## Sync nbafantasy data
+
+The bot syncs every 10 minutes on its own. To sync once by hand and exit:
+
+```bash
+uv run --env-file .env fantasy-bot sync
+```
+
+A sync stores games and per-player stats for every day that has started, and picks for every
+registered participant. Days nbafantasy marks final are never fetched again, except to backfill a
+participant who registered later. Each sync rebuilds every team's day total from picks × player
+stats and logs a warning if it differs from nbafantasy's official total.
+
+## Run with Docker
+
+```bash
+docker compose up -d --build          # start the bot, restarting it if it crashes
+docker compose run --rm bot sync      # one sync, same database
+docker compose logs -f bot
+```
+
+The database lives in the `bot-data` volume at `/data/bot.db`, so it survives rebuilds.
+Deploying to a server is the same three commands after copying the repo and `.env` there.
+
+## Commands
+
+Every command is listed in one routes table in `src/fantasy_bot/bot/commands/__init__.py`, and
+every name starts with `psek-nba-`.
+
+| Command | Shows |
+|---|---|
+| `/psek-nba-money` | The pool, each payout, and each person's net |
 
 ## Layout
 
@@ -31,8 +64,9 @@ a reply, a chart, or a scheduled post.
 src/fantasy_bot/
   main.py          start-up: load settings, migrate the database, start the bot
   config/          Settings read from the environment
-  bot/             Discord: client, and one module per slash command in commands/
+  bot/             Discord: client, routes table and one handler module per command in commands/
   services/        one job each, e.g. money.get_money_summary; returns plain data
+  clients/         outside APIs (nbafantasy); fetch + parse JSON into models
   repositories/    SQL only, plus migrations/
   calculations/    pure rules, e.g. payout.settle
   models.py        dataclasses shared by every layer

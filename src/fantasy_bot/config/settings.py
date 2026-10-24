@@ -15,6 +15,7 @@ class Settings:
     guild_id: int | None
     db_path: str
     payout_split_bp: tuple[int, ...] = (5000, 3000, 2000)
+    sync_interval_minutes: int = 10
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] = os.environ) -> "Settings":

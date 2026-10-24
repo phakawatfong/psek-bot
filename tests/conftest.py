@@ -23,12 +23,15 @@ def seeded(conn: sqlite3.Connection) -> sqlite3.Connection:
         [(SEASON, 1, 5000), (SEASON, 2, 3000), (SEASON, 3, 2000)],
     )
     conn.executemany(
-        "INSERT INTO day VALUES (?, ?, 1, ?, '2026-10-20T18:30:00Z', 1, 1)",
+        "INSERT INTO day (season_id, day_id, gameweek, name, deadline_time, finished,"
+        " data_checked) VALUES (?, ?, 1, ?, '2026-10-20T18:30:00Z', 1, 1)",
         [(SEASON, 1, "Gameweek 1 - Day 1"), (SEASON, 2, "Gameweek 1 - Day 2")],
     )
     entries = [(101, "Alpha"), (102, "Bravo"), (103, "Charlie"), (104, "Delta"), (105, "Echo")]
     conn.executemany(
-        "INSERT INTO entry VALUES (?, ?, ?, 'manager')", [(SEASON, e, n) for e, n in entries]
+        "INSERT INTO entry (season_id, entry_id, entry_name, manager_name)"
+        " VALUES (?, ?, ?, 'manager')",
+        [(SEASON, e, n) for e, n in entries],
     )
     participants = [  # (discord user, entry, buy-in, status)
         (11, 101, 1000, "approved"),

@@ -1,0 +1,413 @@
+{
+ "teams": [
+  {
+   "id": 1,
+   "name": "Atlanta Hawks",
+   "short_name": "ATL"
+  },
+  {
+   "id": 2,
+   "name": "Boston Celtics",
+   "short_name": "BOS"
+  },
+  {
+   "id": 3,
+   "name": "Brooklyn Nets",
+   "short_name": "BKN"
+  },
+  {
+   "id": 4,
+   "name": "Charlotte Hornets",
+   "short_name": "CHA"
+  },
+  {
+   "id": 5,
+   "name": "Chicago Bulls",
+   "short_name": "CHI"
+  },
+  {
+   "id": 6,
+   "name": "Cleveland Cavaliers",
+   "short_name": "CLE"
+  },
+  {
+   "id": 7,
+   "name": "Dallas Mavericks",
+   "short_name": "DAL"
+  },
+  {
+   "id": 8,
+   "name": "Denver Nuggets",
+   "short_name": "DEN"
+  },
+  {
+   "id": 9,
+   "name": "Detroit Pistons",
+   "short_name": "DET"
+  },
+  {
+   "id": 10,
+   "name": "Golden State Warriors",
+   "short_name": "GSW"
+  },
+  {
+   "id": 11,
+   "name": "Houston Rockets",
+   "short_name": "HOU"
+  },
+  {
+   "id": 12,
+   "name": "Indiana Pacers",
+   "short_name": "IND"
+  },
+  {
+   "id": 13,
+   "name": "LA Clippers",
+   "short_name": "LAC"
+  },
+  {
+   "id": 14,
+   "name": "Los Angeles Lakers",
+   "short_name": "LAL"
+  },
+  {
+   "id": 15,
+   "name": "Memphis Grizzlies",
+   "short_name": "MEM"
+  },
+  {
+   "id": 16,
+   "name": "Miami Heat",
+   "short_name": "MIA"
+  },
+  {
+   "id": 17,
+   "name": "Milwaukee Bucks",
+   "short_name": "MIL"
+  },
+  {
+   "id": 18,
+   "name": "Minnesota Timberwolves",
+   "short_name": "MIN"
+  },
+  {
+   "id": 19,
+   "name": "New Orleans Pelicans",
+   "short_name": "NOP"
+  },
+  {
+   "id": 20,
+   "name": "New York Knicks",
+   "short_name": "NYK"
+  },
+  {
+   "id": 21,
+   "name": "Oklahoma City Thunder",
+   "short_name": "OKC"
+  },
+  {
+   "id": 22,
+   "name": "Orlando Magic",
+   "short_name": "ORL"
+  },
+  {
+   "id": 23,
+   "name": "Philadelphia 76ers",
+   "short_name": "PHI"
+  },
+  {
+   "id": 24,
+   "name": "Phoenix Suns",
+   "short_name": "PHX"
+  },
+  {
+   "id": 25,
+   "name": "Portland Trail Blazers",
+   "short_name": "POR"
+  },
+  {
+   "id": 26,
+   "name": "Sacramento Kings",
+   "short_name": "SAC"
+  },
+  {
+   "id": 27,
+   "name": "San Antonio Spurs",
+   "short_name": "SAS"
+  },
+  {
+   "id": 28,
+   "name": "Toronto Raptors",
+   "short_name": "TOR"
+  },
+  {
+   "id": 29,
+   "name": "Utah Jazz",
+   "short_name": "UTA"
+  },
+  {
+   "id": 30,
+   "name": "Washington Wizards",
+   "short_name": "WAS"
+  }
+ ],
+ "phases": [
+  {
+   "id": 1,
+   "name": "Overall",
+   "start_event": 1,
+   "stop_event": 159
+  },
+  {
+   "id": 2,
+   "name": "Gameweek 1",
+   "start_event": 1,
+   "stop_event": 6
+  },
+  {
+   "id": 3,
+   "name": "Gameweek 2",
+   "start_event": 7,
+   "stop_event": 13
+  },
+  {
+   "id": 4,
+   "name": "Gameweek 3",
+   "start_event": 14,
+   "stop_event": 19
+  },
+  {
+   "id": 5,
+   "name": "Gameweek 4",
+   "start_event": 20,
+   "stop_event": 26
+  },
+  {
+   "id": 6,
+   "name": "Gameweek 5",
+   "start_event": 27,
+   "stop_event": 33
+  },
+  {
+   "id": 7,
+   "name": "Gameweek 6",
+   "start_event": 34,
+   "stop_event": 39
+  },
+  {
+   "id": 8,
+   "name": "Gameweek 7",
+   "start_event": 40,
+   "stop_event": 45
+  },
+  {
+   "id": 9,
+   "name": "Gameweek 8",
+   "start_event": 46,
+   "stop_event": 48
+  },
+  {
+   "id": 10,
+   "name": "Gameweek 9",
+   "start_event": 49,
+   "stop_event": 55
+  },
+  {
+   "id": 11,
+   "name": "Gameweek 10",
+   "start_event": 56,
+   "stop_event": 61
+  },
+  {
+   "id": 12,
+   "name": "Gameweek 11",
+   "start_event": 62,
+   "stop_event": 68
+  },
+  {
+   "id": 13,
+   "name": "Gameweek 12",
+   "start_event": 69,
+   "stop_event": 75
+  },
+  {
+   "id": 14,
+   "name": "Gameweek 13",
+   "start_event": 76,
+   "stop_event": 82
+  },
+  {
+   "id": 15,
+   "name": "Gameweek 14",
+   "start_event": 83,
+   "stop_event": 89
+  },
+  {
+   "id": 16,
+   "name": "Gameweek 15",
+   "start_event": 90,
+   "stop_event": 96
+  },
+  {
+   "id": 17,
+   "name": "Gameweek 16",
+   "start_event": 97,
+   "stop_event": 103
+  },
+  {
+   "id": 18,
+   "name": "Gameweek 17",
+   "start_event": 104,
+   "stop_event": 110
+  },
+  {
+   "id": 19,
+   "name": "Gameweek 18",
+   "start_event": 111,
+   "stop_event": 114
+  },
+  {
+   "id": 20,
+   "name": "Gameweek 19",
+   "start_event": 115,
+   "stop_event": 118
+  },
+  {
+   "id": 21,
+   "name": "Gameweek 20",
+   "start_event": 119,
+   "stop_event": 125
+  },
+  {
+   "id": 22,
+   "name": "Gameweek 21",
+   "start_event": 126,
+   "stop_event": 132
+  },
+  {
+   "id": 23,
+   "name": "Gameweek 22",
+   "start_event": 133,
+   "stop_event": 139
+  },
+  {
+   "id": 24,
+   "name": "Gameweek 23",
+   "start_event": 140,
+   "stop_event": 146
+  },
+  {
+   "id": 25,
+   "name": "Gameweek 24",
+   "start_event": 147,
+   "stop_event": 153
+  },
+  {
+   "id": 26,
+   "name": "Gameweek 25",
+   "start_event": 154,
+   "stop_event": 159
+  }
+ ],
+ "events": [
+  {
+   "id": 4,
+   "name": "Gameweek 1 - Day 4",
+   "deadline_time": "2026-10-23T19:30:00Z",
+   "finished": true,
+   "data_checked": true
+  }
+ ],
+ "elements": [
+  {
+   "id": 70,
+   "code": 1641790,
+   "web_name": "P.Hall",
+   "first_name": "PJ",
+   "second_name": "Hall",
+   "team": 4,
+   "element_type": 2
+  },
+  {
+   "id": 100,
+   "code": 1630596,
+   "web_name": "E.Mobley",
+   "first_name": "Evan",
+   "second_name": "Mobley",
+   "team": 6,
+   "element_type": 2
+  },
+  {
+   "id": 311,
+   "code": 1643553,
+   "web_name": "R.Conwell",
+   "first_name": "Ryan",
+   "second_name": "Conwell",
+   "team": 16,
+   "element_type": 1
+  },
+  {
+   "id": 312,
+   "code": 1643621,
+   "web_name": "T.Donaldson",
+   "first_name": "Tre",
+   "second_name": "Donaldson",
+   "team": 16,
+   "element_type": 1
+  },
+  {
+   "id": 579,
+   "code": 1643022,
+   "web_name": "J.Akins",
+   "first_name": "Jaden",
+   "second_name": "Akins",
+   "team": 20,
+   "element_type": 1
+  },
+  {
+   "id": 395,
+   "code": 1628983,
+   "web_name": "S.Gilgeous-Alexander",
+   "first_name": "Shai",
+   "second_name": "Gilgeous-Alexander",
+   "team": 21,
+   "element_type": 1
+  },
+  {
+   "id": 396,
+   "code": 1631096,
+   "web_name": "C.Holmgren",
+   "first_name": "Chet",
+   "second_name": "Holmgren",
+   "team": 21,
+   "element_type": 2
+  },
+  {
+   "id": 438,
+   "code": 203954,
+   "web_name": "J.Embiid",
+   "first_name": "Joel",
+   "second_name": "Embiid",
+   "team": 23,
+   "element_type": 2
+  },
+  {
+   "id": 439,
+   "code": 1630178,
+   "web_name": "T.Maxey",
+   "first_name": "Tyrese",
+   "second_name": "Maxey",
+   "team": 23,
+   "element_type": 1
+  },
+  {
+   "id": 577,
+   "code": 1643590,
+   "web_name": "F.Okpara",
+   "first_name": "Felix",
+   "second_name": "Okpara",
+   "team": 30,
+   "element_type": 2
+  }
+ ]
+}

@@ -13,7 +13,7 @@ def user_version(conn: sqlite3.Connection) -> int:
 
 def test_fresh_database_reaches_latest_version() -> None:
     conn = connect(":memory:")
-    assert migrate(conn) == 1
+    assert migrate(conn) == 2
     tables = {r[0] for r in conn.execute("SELECT name FROM sqlite_schema WHERE type = 'table'")}
     assert {"season", "participant", "ledger", "fact_player_stat", "fact_pick"} <= tables
 
@@ -21,8 +21,8 @@ def test_fresh_database_reaches_latest_version() -> None:
 def test_rerunning_migrate_is_a_no_op() -> None:
     conn = connect(":memory:")
     migrate(conn)
-    assert migrate(conn) == 1
-    assert user_version(conn) == 1
+    assert migrate(conn) == 2
+    assert user_version(conn) == 2
 
 
 def test_failed_migration_rolls_back_and_keeps_old_version(tmp_path: Path) -> None:

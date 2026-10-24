@@ -1,0 +1,120 @@
+{
+ "active_chip": null,
+ "automatic_subs": [
+  {
+   "entry": 34409,
+   "element_in": 311,
+   "element_out": 395,
+   "event": 4
+  },
+  {
+   "entry": 34409,
+   "element_in": 577,
+   "element_out": 396,
+   "event": 4
+  },
+  {
+   "entry": 34409,
+   "element_in": 70,
+   "element_out": 100,
+   "event": 4
+  }
+ ],
+ "entry_history": {
+  "event": 4,
+  "points": 130,
+  "total_points": 7710,
+  "rank": 43854,
+  "rank_sort": 43855,
+  "overall_rank": 94,
+  "percentile_rank": 100,
+  "overall_rank_percentage": "0.2",
+  "bank": 0,
+  "value": 1000,
+  "event_transfers": 0,
+  "event_transfers_cost": 0,
+  "points_on_bench": 0
+ },
+ "picks": [
+  {
+   "element": 311,
+   "position": 1,
+   "multiplier": 1,
+   "is_captain": false,
+   "is_vice_captain": false,
+   "element_type": 1
+  },
+  {
+   "element": 439,
+   "position": 2,
+   "multiplier": 1,
+   "is_captain": false,
+   "is_vice_captain": false,
+   "element_type": 1
+  },
+  {
+   "element": 577,
+   "position": 3,
+   "multiplier": 1,
+   "is_captain": false,
+   "is_vice_captain": false,
+   "element_type": 2
+  },
+  {
+   "element": 70,
+   "position": 4,
+   "multiplier": 1,
+   "is_captain": false,
+   "is_vice_captain": false,
+   "element_type": 2
+  },
+  {
+   "element": 438,
+   "position": 5,
+   "multiplier": 1,
+   "is_captain": false,
+   "is_vice_captain": false,
+   "element_type": 2
+  },
+  {
+   "element": 312,
+   "position": 6,
+   "multiplier": 0,
+   "is_captain": false,
+   "is_vice_captain": false,
+   "element_type": 1
+  },
+  {
+   "element": 579,
+   "position": 7,
+   "multiplier": 0,
+   "is_captain": false,
+   "is_vice_captain": false,
+   "element_type": 1
+  },
+  {
+   "element": 395,
+   "position": 8,
+   "multiplier": 0,
+   "is_captain": false,
+   "is_vice_captain": false,
+   "element_type": 1
+  },
+  {
+   "element": 396,
+   "position": 9,
+   "multiplier": 0,
+   "is_captain": true,
+   "is_vice_captain": false,
+   "element_type": 2
+  },
+  {
+   "element": 100,
+   "position": 10,
+   "multiplier": 0,
+   "is_captain": false,
+   "is_vice_captain": false,
+   "element_type": 2
+  }
+ ]
+}

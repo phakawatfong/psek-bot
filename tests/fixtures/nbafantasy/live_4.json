@@ -1,0 +1,254 @@
+{
+ "elements": [
+  {
+   "id": 70,
+   "stats": {
+    "minutes": 9,
+    "points_scored": 0,
+    "rebounds": 1,
+    "assists": 3,
+    "blocks": 1,
+    "steals": 0,
+    "total_points": 100,
+    "in_dreamteam": false,
+    "played": true
+   },
+   "explain": [
+    {
+     "fixture": 18,
+     "stats": [
+      {
+       "identifier": "minutes",
+       "points": 0,
+       "value": 9,
+       "points_modification": 0
+      },
+      {
+       "identifier": "rebounds",
+       "points": 10,
+       "value": 1,
+       "points_modification": 0
+      },
+      {
+       "identifier": "assists",
+       "points": 60,
+       "value": 3,
+       "points_modification": 0
+      },
+      {
+       "identifier": "blocks",
+       "points": 30,
+       "value": 1,
+       "points_modification": 0
+      }
+     ]
+    }
+   ],
+   "modified": false
+  },
+  {
+   "id": 100,
+   "stats": {
+    "minutes": 0,
+    "points_scored": 0,
+    "rebounds": 0,
+    "assists": 0,
+    "blocks": 0,
+    "steals": 0,
+    "total_points": 0,
+    "in_dreamteam": false,
+    "played": false
+   },
+   "explain": [],
+   "modified": false
+  },
+  {
+   "id": 311,
+   "stats": {
+    "minutes": 2,
+    "points_scored": 2,
+    "rebounds": 0,
+    "assists": 0,
+    "blocks": 0,
+    "steals": 0,
+    "total_points": 20,
+    "in_dreamteam": false,
+    "played": true
+   },
+   "explain": [
+    {
+     "fixture": 22,
+     "stats": [
+      {
+       "identifier": "minutes",
+       "points": 0,
+       "value": 2,
+       "points_modification": 0
+      },
+      {
+       "identifier": "points_scored",
+       "points": 20,
+       "value": 2,
+       "points_modification": 0
+      }
+     ]
+    }
+   ],
+   "modified": false
+  },
+  {
+   "id": 312,
+   "stats": {
+    "minutes": 0,
+    "points_scored": 0,
+    "rebounds": 0,
+    "assists": 0,
+    "blocks": 0,
+    "steals": 0,
+    "total_points": 0,
+    "in_dreamteam": false,
+    "played": false
+   },
+   "explain": [
+    {
+     "fixture": 22,
+     "stats": [
+      {
+       "identifier": "minutes",
+       "points": 0,
+       "value": 0,
+       "points_modification": 0
+      }
+     ]
+    }
+   ],
+   "modified": false
+  },
+  {
+   "id": 395,
+   "stats": {
+    "minutes": 0,
+    "points_scored": 0,
+    "rebounds": 0,
+    "assists": 0,
+    "blocks": 0,
+    "steals": 0,
+    "total_points": 0,
+    "in_dreamteam": false,
+    "played": false
+   },
+   "explain": [],
+   "modified": false
+  },
+  {
+   "id": 396,
+   "stats": {
+    "minutes": 0,
+    "points_scored": 0,
+    "rebounds": 0,
+    "assists": 0,
+    "blocks": 0,
+    "steals": 0,
+    "total_points": 0,
+    "in_dreamteam": false,
+    "played": false
+   },
+   "explain": [],
+   "modified": false
+  },
+  {
+   "id": 438,
+   "stats": {
+    "minutes": 0,
+    "points_scored": 0,
+    "rebounds": 0,
+    "assists": 0,
+    "blocks": 0,
+    "steals": 0,
+    "total_points": 0,
+    "in_dreamteam": false,
+    "played": false
+   },
+   "explain": [],
+   "modified": false
+  },
+  {
+   "id": 439,
+   "stats": {
+    "minutes": 0,
+    "points_scored": 0,
+    "rebounds": 0,
+    "assists": 0,
+    "blocks": 0,
+    "steals": 0,
+    "total_points": 0,
+    "in_dreamteam": false,
+    "played": false
+   },
+   "explain": [],
+   "modified": false
+  },
+  {
+   "id": 577,
+   "stats": {
+    "minutes": 1,
+    "points_scored": 1,
+    "rebounds": 0,
+    "assists": 0,
+    "blocks": 0,
+    "steals": 0,
+    "total_points": 10,
+    "in_dreamteam": false,
+    "played": true
+   },
+   "explain": [
+    {
+     "fixture": 21,
+     "stats": [
+      {
+       "identifier": "minutes",
+       "points": 0,
+       "value": 1,
+       "points_modification": 0
+      },
+      {
+       "identifier": "points_scored",
+       "points": 10,
+       "value": 1,
+       "points_modification": 0
+      }
+     ]
+    }
+   ],
+   "modified": false
+  },
+  {
+   "id": 579,
+   "stats": {
+    "minutes": 0,
+    "points_scored": 0,
+    "rebounds": 0,
+    "assists": 0,
+    "blocks": 0,
+    "steals": 0,
+    "total_points": 0,
+    "in_dreamteam": false,
+    "played": false
+   },
+   "explain": [
+    {
+     "fixture": 17,
+     "stats": [
+      {
+       "identifier": "minutes",
+       "points": 0,
+       "value": 0,
+       "points_modification": 0
+      }
+     ]
+    }
+   ],
+   "modified": false
+  }
+ ]
+}
