@@ -55,6 +55,8 @@ server needs no open ports except SSH.
    `deploy/setup.sh` into **Add launch script**, turn on **automatic snapshots**, and attach a
    static IP. In the instance's Networking tab keep only SSH (22), ideally limited to your IP.
 2. **Wait** a few minutes for the launch script; it logs to `/var/log/cloud-init-output.log`.
+   It installs everything it needs (git, curl, cron, Docker), so a bare image is fine, but it
+   only supports Ubuntu and Debian: on Amazon Linux it stops with a message saying so.
    (Without a launch script, SSH in and run `curl -fsSL
    https://raw.githubusercontent.com/phakawatfong/psek-bot/main/deploy/setup.sh | sudo bash`.)
 3. **Copy secrets and start**, from your computer:
@@ -74,7 +76,8 @@ server needs no open ports except SSH.
 Stop any bot you run locally first: two processes with the same token both answer commands.
 
 **Update** to the latest code: `ssh ubuntu@<server-ip> 'cd /opt/psek-bot && git pull && docker
-compose up -d --build'`. **Logs**: `docker compose logs -f bot` (capped at 30MB).
+compose up -d --build'`. Run git as `ubuntu`, not with `sudo`: the repo belongs to `ubuntu`, and
+git refuses to work in it as root. **Logs**: `docker compose logs -f bot` (capped at 30MB).
 
 **Backups**: Lightsail snapshots the whole server daily. Separately, cron runs `fantasy-bot
 backup` at 03:00 UTC, writing `/data/backups/bot-YYYY-MM-DD.db` in the volume and keeping 14

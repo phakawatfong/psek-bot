@@ -18,6 +18,18 @@ if [ "$(id -u)" -ne 0 ]; then
   echo "Run as root (sudo bash setup.sh)." >&2
   exit 1
 fi
+# shellcheck disable=SC1091  # /etc/os-release exists on every Ubuntu and Debian
+. /etc/os-release
+if ! command -v apt-get >/dev/null || [[ "$ID" != ubuntu && "$ID" != debian ]]; then
+  echo "This script supports Ubuntu and Debian only (found: ${PRETTY_NAME:-unknown})." >&2
+  echo "Create the Lightsail instance from the Ubuntu 24.04 blueprint." >&2
+  exit 1
+fi
+
+echo "==> Base tools: git to fetch the code, cron for the nightly backup"
+export DEBIAN_FRONTEND=noninteractive
+apt-get update
+apt-get install -y ca-certificates curl git cron sudo
 
 echo "==> Swap ($SWAP_SIZE): building the image can need more memory than the smallest plans have"
 if ! swapon --show=NAME --noheadings | grep -qx /swapfile; then
@@ -28,17 +40,13 @@ if ! swapon --show=NAME --noheadings | grep -qx /swapfile; then
 fi
 grep -q '^/swapfile ' /etc/fstab || echo '/swapfile none swap sw 0 0' >> /etc/fstab
 
-echo "==> Docker, from Docker's own apt repository (Ubuntu's package lacks the compose plugin)"
+echo "==> Docker, from Docker's own apt repository (the distro package lacks the compose plugin)"
 if ! command -v docker >/dev/null || ! docker compose version >/dev/null 2>&1; then
-  apt-get update
-  apt-get install -y ca-certificates curl git
   install -m 0755 -d /etc/apt/keyrings
-  curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+  curl -fsSL "https://download.docker.com/linux/$ID/gpg" -o /etc/apt/keyrings/docker.asc
   chmod a+r /etc/apt/keyrings/docker.asc
-  # shellcheck disable=SC1091  # /etc/os-release exists on every Ubuntu
-  codename="$(. /etc/os-release && echo "$VERSION_CODENAME")"
   echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc]" \
-    "https://download.docker.com/linux/ubuntu $codename stable" \
+    "https://download.docker.com/linux/$ID $VERSION_CODENAME stable" \
     > /etc/apt/sources.list.d/docker.list
   apt-get update
   apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin \
