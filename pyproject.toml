@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Discord bot that summarizes an NBA Fantasy league and settles the friends' pool"
 readme = "README.md"
 authors = [
-    { name = "phakawat (Kids) fongchai", email = "phakawat.fo@easysunday.com" }
+    { name = "phakawat (Kids) fongchai", email = "yzykkidds@gmail.com" }
 ]
 requires-python = ">=3.13"
 dependencies = [
