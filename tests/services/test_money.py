@@ -2,7 +2,7 @@ import sqlite3
 
 import pytest
 
-from fantasy_bot.models import SeasonMoney, WeekMoney
+from fantasy_bot.models import DEFAULT_RULES, PoolRules, SeasonMoney, WeekMoney
 from fantasy_bot.services.money import get_season_money, get_week_money
 
 SEASON = "2026-27"
@@ -55,7 +55,7 @@ def test_season_counts_final_weeks_and_shows_current_week_separately(
 ) -> None:
     season = get_season_money(two_weeks, SEASON)
     # Week 1 only: Bravo, Alpha, Charlie each paid 100.00 into a 300.00 pool.
-    assert (season.weekly_buy_in, season.settled_weeks) == (10000, [1])
+    assert (season.rules, season.settled_weeks) == (DEFAULT_RULES, [1])
     assert [(r.name.team_name, r.total.paid, r.total.won, r.total.net) for r in season.rows] == [
         ("Bravo", 10000, 15000, 5000),
         ("Alpha", 10000, 9000, -1000),
@@ -77,4 +77,6 @@ def test_week_without_points_has_no_money(seeded: sqlite3.Connection) -> None:
 def test_empty_season(conn: sqlite3.Connection) -> None:
     conn.execute("INSERT INTO season (season_id, league_id) VALUES ('2027-28', 99)")
     conn.execute("INSERT INTO payout_rank VALUES ('2027-28', 1, 10000)")
-    assert get_season_money(conn, "2027-28") == SeasonMoney(10000, [], [], None)
+    assert get_season_money(conn, "2027-28") == SeasonMoney(
+        PoolRules(10000, (10000,)), [], [], None
+    )

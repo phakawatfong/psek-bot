@@ -27,6 +27,16 @@ class RegisterResult:
     gameweek: int | None = None  # first gameweek in the pool, for "registered"
 
 
+AddOutcome = Literal["added", "already_registered", "member_has_other_team", "not_in_league"]
+
+
+@dataclass(frozen=True)
+class AddResult:
+    outcome: AddOutcome
+    team: LeagueTeam | None = None
+    gameweek: int | None = None
+
+
 @dataclass(frozen=True)
 class AdminResult:
     done: bool  # False: the team hasn't registered
@@ -56,6 +66,32 @@ def register(
     gameweek = joining_gameweek(conn, season_id, now)
     repo.add(conn, season_id, discord_user_id, entry_id, gameweek, now.isoformat())
     return RegisterResult("registered", team, gameweek)
+
+
+def add_for_member(
+    conn: sqlite3.Connection,
+    season_id: str,
+    entry_id: int,
+    discord_user_id: int | None,
+    from_gameweek: int | None,
+    now: datetime,
+) -> AddResult:
+    """An admin puts a team straight into the pool on a friend's behalf.
+
+    With no Discord account given the team gets a placeholder id, and the friend links it later
+    by running /psek-nba-register.
+    """
+    team = repo.league_team(conn, season_id, entry_id)
+    if team is None:
+        return AddResult("not_in_league")
+    if repo.by_entry(conn, season_id, entry_id):
+        return AddResult("already_registered", team)
+    if discord_user_id is not None and (mine := repo.by_user(conn, season_id, discord_user_id)):
+        return AddResult("member_has_other_team", repo.league_team(conn, season_id, mine.entry_id))
+    user_id = discord_user_id or repo.next_placeholder_id(conn, season_id)
+    gameweek = from_gameweek or joining_gameweek(conn, season_id, now)
+    repo.add(conn, season_id, user_id, entry_id, gameweek, now.isoformat(), status="approved")
+    return AddResult("added", team, gameweek)
 
 
 def joining_gameweek(conn: sqlite3.Connection, season_id: str, now: datetime) -> int:

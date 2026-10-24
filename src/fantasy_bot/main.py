@@ -9,6 +9,7 @@ from fantasy_bot.bot.client import FantasyBot
 from fantasy_bot.config.settings import ConfigError, Settings
 from fantasy_bot.repositories.database import backup, connect, migrate
 from fantasy_bot.repositories.seasons import ensure_season
+from fantasy_bot.services.rules import config_drift, get_rules
 from fantasy_bot.services.sync import sync_now
 
 
@@ -32,13 +33,13 @@ def main() -> None:
 
     conn = connect(settings.db_path)
     migrate(conn)
-    ensure_season(
-        conn,
-        settings.season_id,
-        settings.league_id,
-        settings.payout_split_bp,
-        settings.weekly_buy_in_minor,
-    )
+    ensure_season(conn, settings.season_id, settings.league_id, settings.pool_rules)
+    for difference in config_drift(get_rules(conn, settings.season_id), settings.pool_rules):
+        print(
+            f"WARNING: {difference}. Money rules are fixed for a season so past weeks never"
+            " change; the season's rules stay in force. Use a new SEASON_ID to change them.",
+            file=sys.stderr,
+        )
 
     if command == "backup":
         print(

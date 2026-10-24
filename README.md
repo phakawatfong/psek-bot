@@ -97,8 +97,10 @@ every name starts with `psek-nba-`.
 | `/psek-nba-chart` | A picture of every team's season points growing day by day, with gameweek boundaries |
 | `/psek-nba-schedule [gameweek] [day]` | NBA games for the upcoming day (the first not yet finished), a whole gameweek, or one day of it (`day:1` = its first day), with team logos and dates and times in UTC+7 |
 | `/psek-nba-participants` | Every team in the league: in the pool, waiting for approval, or not registered yet, with who registered each |
+| `/psek-nba-rules` | The season's prize pool rules in plain words: buy-in, split, ties, rounding, when a week counts |
 | `/psek-nba-money [gameweek]` | Season money over every final week plus the current week so far, or one week's pool |
 | `/psek-nba-register team` | Join the pool: start typing your nbafantasy team and pick it |
+| `/psek-nba-add team [member] [from_gameweek]` | Admin: put a friend's team straight into the pool, linked to their Discord account if given |
 | `/psek-nba-approve team [from_gameweek]` | Admin: let a registered team into the pool, optionally from an earlier gameweek |
 | `/psek-nba-paid team amount [direction] [note]` | Admin: record real money paid into (`in`) or out of (`out`) the pot |
 
@@ -117,7 +119,10 @@ tab. Logos come from ESPN's public image CDN; if one can't be fetched, that team
    pending, starting from the next gameweek, or the current one if it hasn't started.
 2. An admin runs `/psek-nba-approve`. Use `from_gameweek:1` to backdate friends who were in from
    the start.
-3. A team entered by hand with a placeholder Discord id is claimed by the first friend who
+3. Or an admin adds teams for everyone with `/psek-nba-add`, which puts a team straight into the
+   pool. Pick the friend as `member` to link their Discord account now; leave it empty and the
+   team gets a placeholder id they can claim later.
+4. A team entered by hand with a placeholder Discord id is claimed by the first friend who
    registers it: only its Discord id changes, its approval and start week stay. A team already
    linked to a real account can't be taken by someone else.
 
@@ -140,11 +145,20 @@ or the people themselves. Discord applies these overrides, so nothing in the bot
 
 ## Weekly pool
 
-Everyone pays `WEEKLY_BUY_IN` (default 100) each gameweek from the week they joined. Each week's
-pool is split 50/30/20 by that week's points, net of transfer costs. Nothing is stored: every
+Two settings in `.env` define the money, both in plain units:
+
+| Setting | Default | Meaning |
+|---|---|---|
+| `WEEKLY_BUY_IN` | `100` | What each person pays into each gameweek's pool, from the week they joined |
+| `PAYOUT_SPLIT` | `50,30,20` | Percent of the weekly pool for 1st, 2nd, 3rd, and so on; must add up to 100 |
+
+Each week's pool is split by that week's points, net of transfer costs. `/psek-nba-rules` states
+every rule with this season's numbers, and the steps are in `calculations/payout.py: settle()`. Nothing is stored: every
 `/psek-nba-money` recomputes the weeks from the synced points. A week counts toward the season
 once nbafantasy marks all its days final. The buy-in and split are saved when the season is
-created and never change after that, because changing them would rewrite every past week.
+created and never change after that, because changing them would rewrite every past week. If
+`.env` later says something different, the bot logs a warning naming both values and keeps the
+season's; use a new `SEASON_ID` to start a season with new rules.
 
 ## Layout
 

@@ -1,5 +1,6 @@
 from fantasy_bot.bot.commands.money import format_season, format_week
 from fantasy_bot.models import (
+    DEFAULT_RULES,
     MoneyLine,
     ParticipantId,
     ParticipantName,
@@ -36,7 +37,7 @@ def test_week_shows_pool_points_winnings_and_signed_net() -> None:
 
 def test_season_lists_totals_then_the_week_in_progress() -> None:
     season = SeasonMoney(
-        10000,
+        DEFAULT_RULES,
         [1, 2],
         [
             SeasonMoneyRow(JK, SeasonTotal(ParticipantId(1), 2, 20000, 32000, 12000)),
@@ -45,7 +46,8 @@ def test_season_lists_totals_then_the_week_in_progress() -> None:
         week(final=False),
     )
     assert format_season(season) == (
-        "**Season after 2 final weeks** (100.00 per week each)\n"
+        "**Season after 2 final weeks** (100.00 per week each, paid 50/30/20;"
+        " /psek-nba-rules explains)\n"
         "1. jkslots (pisit manoo) buy-ins 200.00, won 320.00, net +120.00, is owed 120.00\n"
         "2. GO-GO Team buy-ins 200.00, won 80.00, net -120.00, owes 120.00\n"
         "\n"
@@ -56,8 +58,9 @@ def test_season_lists_totals_then_the_week_in_progress() -> None:
 
 
 def test_season_before_any_final_week() -> None:
-    assert format_season(SeasonMoney(10000, [], [], None)) == (
-        "**Season after 0 final weeks** (100.00 per week each)\nNo final weeks yet."
+    assert format_season(SeasonMoney(DEFAULT_RULES, [], [], None)) == (
+        "**Season after 0 final weeks** (100.00 per week each, paid 50/30/20;"
+        " /psek-nba-rules explains)\nNo final weeks yet."
     )
 
 
@@ -69,7 +72,7 @@ def test_recorded_payments_settle_the_balance() -> None:
     ] == [-12000, 8000, 0, -20000]
     assert (
         format_season(
-            SeasonMoney(10000, [1, 2], [SeasonMoneyRow(GO, total, 20000, 8000)], None)
+            SeasonMoney(DEFAULT_RULES, [1, 2], [SeasonMoneyRow(GO, total, 20000, 8000)], None)
         ).splitlines()[1]
         == "1. GO-GO Team buy-ins 200.00, won 80.00, net -120.00, settled"
     )

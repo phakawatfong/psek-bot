@@ -34,7 +34,7 @@ def get_season_money(conn: sqlite3.Connection, season_id: str) -> SeasonMoney:
     payments = registration.payment_totals(conn, season_id)
     latest = weeks[-1] if weeks else None
     return SeasonMoney(
-        weekly_buy_in=pool.weekly_buy_in(conn, season_id),
+        rules=seasons.season_rules(conn, season_id),
         settled_weeks=[w.gameweek for w in settled],
         rows=[
             SeasonMoneyRow(names[t.participant_id], t, *payments.get(t.participant_id, (0, 0)))

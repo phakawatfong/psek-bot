@@ -1,6 +1,6 @@
 import sqlite3
 
-from fantasy_bot.models import LeagueTeam, ParticipantId, Registration
+from fantasy_bot.models import PLACEHOLDER_MAX_ID, LeagueTeam, ParticipantId, Registration
 
 
 def league_team(conn: sqlite3.Connection, season_id: str, entry_id: int) -> LeagueTeam | None:
@@ -16,20 +16,22 @@ def search_teams(
 ) -> list[LeagueTeam]:
     """League teams whose team or manager name contains `text`.
 
-    status None searches every team in the league; 'pending' or 'approved' only registered ones.
+    status None searches every team in the league; 'pending' or 'approved' only teams registered
+    with that status; 'unregistered' only teams nobody has registered.
     """
     like = f"%{text.strip()}%"
-    registered = (
-        " AND e.entry_id IN (SELECT entry_id FROM participant WHERE season_id = e.season_id"
-        " AND status = ?)"
-        if status
-        else ""
-    )
+    registered = "SELECT entry_id FROM participant WHERE season_id = e.season_id"
+    if status == "unregistered":
+        where, args = f" AND e.entry_id NOT IN ({registered})", []
+    elif status:
+        where, args = f" AND e.entry_id IN ({registered} AND status = ?)", [status]
+    else:
+        where, args = "", []
     rows = conn.execute(
         "SELECT e.entry_id, e.entry_name, e.manager_name FROM entry e"
         " WHERE e.season_id = ? AND (e.entry_name LIKE ? OR e.manager_name LIKE ?)"
-        f"{registered} ORDER BY e.entry_name LIMIT ?",
-        (season_id, like, like, *([status] if status else []), limit),
+        f"{where} ORDER BY e.entry_name LIMIT ?",
+        (season_id, like, like, *args, limit),
     )
     return [LeagueTeam(*row) for row in rows]
 
@@ -49,13 +51,24 @@ def add(
     entry_id: int,
     joined_gameweek: int,
     registered_at: str,
+    status: str = "pending",
 ) -> None:
     with conn:
         conn.execute(
             "INSERT INTO participant (season_id, discord_user_id, entry_id, status,"
-            " registered_at, joined_gameweek) VALUES (?, ?, ?, 'pending', ?, ?)",
-            (season_id, discord_user_id, entry_id, registered_at, joined_gameweek),
+            " registered_at, joined_gameweek) VALUES (?, ?, ?, ?, ?, ?)",
+            (season_id, discord_user_id, entry_id, status, registered_at, joined_gameweek),
         )
+
+
+def next_placeholder_id(conn: sqlite3.Connection, season_id: str) -> int:
+    """A Discord id no real account has, for a team added before its owner links it."""
+    highest: int = conn.execute(
+        "SELECT COALESCE(MAX(discord_user_id), 0) FROM participant"
+        " WHERE season_id = ? AND discord_user_id < ?",
+        (season_id, PLACEHOLDER_MAX_ID),
+    ).fetchone()[0]
+    return highest + 1
 
 
 def link_user(conn: sqlite3.Connection, participant_id: int, discord_user_id: int) -> None:

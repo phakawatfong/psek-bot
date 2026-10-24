@@ -1,9 +1,9 @@
 import pytest
 
-from fantasy_bot.bot.commands.admin import format_approve, format_payment
+from fantasy_bot.bot.commands.admin import format_add, format_approve, format_payment
 from fantasy_bot.bot.commands.register import format_register
 from fantasy_bot.models import LeagueTeam
-from fantasy_bot.services.registration import AdminResult, RegisterResult
+from fantasy_bot.services.registration import AddResult, AdminResult, RegisterResult
 
 FOX = LeagueTeam(106, "Foxtrot", "fox manager")
 
@@ -38,3 +38,13 @@ def test_admin_replies() -> None:
         "Recorded: **Foxtrot (fox manager)** paid in 100.00."
     )
     assert format_approve(AdminResult(False)).startswith("That team hasn't registered")
+
+
+def test_add_replies() -> None:
+    assert format_add(AddResult("added", FOX, 1), None) == (
+        "Added **Foxtrot (fox manager)** to the pool from gameweek 1; its owner can link it by"
+        " running /psek-nba-register."
+    )
+    assert format_add(AddResult("already_registered", FOX), None).startswith(
+        "**Foxtrot (fox manager)** is already registered"
+    )

@@ -10,6 +10,7 @@ from fantasy_bot.bot.commands import (
     participants,
     points,
     register,
+    rules,
     schedule,
     standings,
 )
@@ -50,6 +51,7 @@ def register_all(
             "Registered teams",
             participants.handler(conn, season_id),
         ),
+        ("rules", "How the prize pool works this season", rules.handler(conn, season_id)),
         (
             "money",
             "Weekly pools, each person's net, and who still owes or is owed",
@@ -57,6 +59,11 @@ def register_all(
         ),
         ("register", "Join the pool with your nbafantasy team", register.handler(conn, season_id)),
         # Admin only: visible to members with Manage Server.
+        (
+            "add",
+            "Add a friend's team straight into the pool",
+            admin.add_handler(conn, season_id),
+        ),
         (
             "approve",
             "Approve a registered team into the pool",

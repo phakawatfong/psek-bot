@@ -8,7 +8,7 @@ from typing import Any
 import pytest
 
 from fantasy_bot.clients.nbafantasy import NotFound
-from fantasy_bot.models import SyncResult
+from fantasy_bot.models import DEFAULT_RULES, SyncResult
 from fantasy_bot.repositories.seasons import ensure_season
 from fantasy_bot.services.sync import sync_season
 
@@ -43,7 +43,7 @@ class FakeApi:
 
 
 def track(conn: sqlite3.Connection, *entry_ids: int) -> None:
-    ensure_season(conn, SEASON, 14, [5000, 3000, 2000], 10000)
+    ensure_season(conn, SEASON, 14, DEFAULT_RULES)
     conn.executemany(
         "INSERT INTO participant (season_id, discord_user_id, entry_id, registered_at)"
         " VALUES (?, ?, ?, '2026-10-20T00:00:00Z')",

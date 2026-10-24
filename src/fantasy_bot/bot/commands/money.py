@@ -8,6 +8,7 @@ from discord import app_commands
 from fantasy_bot.bot.commands.formatting import display_name, money, points
 from fantasy_bot.models import SeasonMoney, WeekMoney
 from fantasy_bot.services.money import get_season_money, get_week_money
+from fantasy_bot.services.rules import percentages
 
 
 def signed(minor: int) -> str:
@@ -41,7 +42,8 @@ def format_season(season: SeasonMoney) -> str:
     weeks = season.settled_weeks
     title = (
         f"**Season after {len(weeks)} final week{'s' * (len(weeks) != 1)}**"
-        f" ({money(season.weekly_buy_in)} per week each)"
+        f" ({money(season.rules.weekly_buy_in_minor)} per week each,"
+        f" paid {percentages(season.rules.split_bp)}; /psek-nba-rules explains)"
     )
     rows = [
         f"{i}. {display_name(r.name)} buy-ins {money(r.total.paid)},"

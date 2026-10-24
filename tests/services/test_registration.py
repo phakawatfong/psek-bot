@@ -6,6 +6,7 @@ import pytest
 from fantasy_bot.repositories.registration import by_entry
 from fantasy_bot.services.money import get_season_money
 from fantasy_bot.services.registration import (
+    add_for_member,
     approve,
     find_teams,
     joining_gameweek,
@@ -102,3 +103,35 @@ def test_team_search_matches_team_or_manager_and_filters_by_status(
     assert [t.entry_id for t in find_teams(league, SEASON, "fox")] == [106]
     assert [t.entry_id for t in find_teams(league, SEASON, "", "pending")] == [105, 106]
     assert len(find_teams(league, SEASON, "manager", "approved")) == 4
+
+
+def test_admin_adds_a_friends_team_straight_into_the_pool(league: sqlite3.Connection) -> None:
+    result = add_for_member(league, SEASON, 106, ALICE, 1, NOW)
+    found = by_entry(league, SEASON, 106)
+    assert (result.outcome, result.gameweek) == ("added", 1)
+    assert found is not None and (found.discord_user_id, found.status) == (ALICE, "approved")
+
+
+def test_team_added_without_a_member_is_claimed_when_the_friend_registers(
+    league: sqlite3.Connection,
+) -> None:
+    result = add_for_member(league, SEASON, 106, None, None, NOW)
+    found = by_entry(league, SEASON, 106)
+    # Seeded placeholders are 11-15, so the next is 16; with no week given it joins week 2.
+    assert (result.gameweek, found and found.discord_user_id) == (2, 16)
+    assert register(league, SEASON, BOB, 106, NOW).outcome == "claimed"
+
+
+def test_admin_add_refuses_registered_teams_busy_members_and_strangers(
+    league: sqlite3.Connection,
+) -> None:
+    register(league, SEASON, ALICE, 101, NOW)  # Alice claims Alpha
+    assert [
+        add_for_member(league, SEASON, 102, None, 1, NOW).outcome,
+        add_for_member(league, SEASON, 106, ALICE, 1, NOW).outcome,
+        add_for_member(league, SEASON, 999, BOB, 1, NOW).outcome,
+    ] == ["already_registered", "member_has_other_team", "not_in_league"]
+
+
+def test_unregistered_search_lists_only_unclaimed_league_teams(league: sqlite3.Connection) -> None:
+    assert [t.entry_id for t in find_teams(league, SEASON, "", "unregistered")] == [106]

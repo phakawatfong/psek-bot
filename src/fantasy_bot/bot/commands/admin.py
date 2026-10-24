@@ -17,9 +17,33 @@ from discord import app_commands
 from fantasy_bot.bot.commands.formatting import money
 from fantasy_bot.bot.commands.register import team_name
 from fantasy_bot.bot.commands.teams import team_autocomplete
-from fantasy_bot.services.registration import AdminResult, approve, record_payment
+from fantasy_bot.services.registration import (
+    AddResult,
+    AdminResult,
+    add_for_member,
+    approve,
+    record_payment,
+)
 
 NOT_REGISTERED = "That team hasn't registered. Ask them to run /psek-nba-register first."
+
+
+def format_add(result: AddResult, member: discord.abc.User | None) -> str:
+    team = team_name(result.team)
+    match result.outcome:
+        case "added":
+            owner = (
+                f" for {member.mention}"
+                if member
+                else "; its owner can link it by running /psek-nba-register"
+            )
+            return f"Added {team} to the pool from gameweek {result.gameweek}{owner}."
+        case "already_registered":
+            return f"{team} is already registered. Use /psek-nba-approve if it's waiting."
+        case "member_has_other_team":
+            return f"That member already has {team}. It's one team per person."
+        case "not_in_league":
+            return "That team isn't in the league. Start typing its name and pick it."
 
 
 def format_approve(result: AdminResult) -> str:
@@ -53,6 +77,38 @@ def approve_handler(
     ) -> None:
         reply = format_approve(approve(conn, season_id, team, from_gameweek))
         await interaction.response.send_message(reply, ephemeral=True)
+
+    return handle
+
+
+def add_handler(
+    conn: sqlite3.Connection, season_id: str
+) -> Callable[..., Coroutine[Any, Any, None]]:
+    @app_commands.default_permissions(manage_guild=True)
+    @app_commands.guild_only()
+    @app_commands.describe(
+        team="A league team nobody has registered yet",
+        member="The friend whose team it is (optional: they can link it later themselves)",
+        from_gameweek="First gameweek it pays and plays (default: the next one not started)",
+    )
+    @app_commands.autocomplete(team=team_autocomplete(conn, season_id, status="unregistered"))
+    async def handle(
+        interaction: discord.Interaction,
+        team: int,
+        member: discord.Member | None = None,
+        from_gameweek: app_commands.Range[int, 1, 30] | None = None,
+    ) -> None:
+        result = add_for_member(
+            conn,
+            season_id,
+            team,
+            member.id if member else None,
+            from_gameweek,
+            datetime.now(UTC),
+        )
+        await interaction.response.send_message(
+            format_add(result, member), allowed_mentions=discord.AllowedMentions.none()
+        )
 
     return handle
 

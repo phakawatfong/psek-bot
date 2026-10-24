@@ -8,6 +8,17 @@ PLACEHOLDER_MAX_ID = 10**15
 
 
 @dataclass(frozen=True)
+class PoolRules:
+    """How a season's money works. Fixed for the whole season once it starts."""
+
+    weekly_buy_in_minor: int  # each person, each gameweek, e.g. 10000 = 100.00
+    split_bp: tuple[int, ...]  # share of each week's pool per place, e.g. (5000, 3000, 2000)
+
+
+DEFAULT_RULES = PoolRules(weekly_buy_in_minor=10000, split_bp=(5000, 3000, 2000))
+
+
+@dataclass(frozen=True)
 class Standing:
     participant_id: ParticipantId
     points: int  # tenths of a fantasy point, as nbafantasy reports them
@@ -82,7 +93,7 @@ class Registration:
 
 @dataclass(frozen=True)
 class SeasonMoney:
-    weekly_buy_in: int
+    rules: PoolRules
     settled_weeks: list[int]
     rows: list[SeasonMoneyRow]  # best net first
     in_progress: WeekMoney | None  # the latest week, if not final yet

@@ -11,7 +11,7 @@ ALLOWED = {
     "clients": {"models"},
     "services": {"models", "calculations", "repositories", "clients"},
     "bot": {"models", "services"},
-    "config": set(),
+    "config": {"models"},
 }
 
 
