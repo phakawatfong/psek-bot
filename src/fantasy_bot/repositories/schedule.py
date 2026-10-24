@@ -42,3 +42,10 @@ def team_codes(conn: sqlite3.Connection, season_id: str) -> list[str]:
         "SELECT short_name FROM nba_team WHERE season_id = ? ORDER BY short_name", (season_id,)
     )
     return [code for (code,) in rows]
+
+
+def gameweek_of(conn: sqlite3.Connection, season_id: str, day_id: int) -> int | None:
+    row = conn.execute(
+        "SELECT gameweek FROM day WHERE season_id = ? AND day_id = ?", (season_id, day_id)
+    ).fetchone()
+    return row[0] if row else None

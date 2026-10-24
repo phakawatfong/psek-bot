@@ -1,6 +1,6 @@
 from fantasy_bot.bot.commands.formatting import split_message
 from fantasy_bot.bot.commands.participants import format_participants
-from fantasy_bot.bot.commands.points import format_day_points
+from fantasy_bot.bot.commands.points import format_day_points, format_gameweek_points
 from fantasy_bot.bot.commands.schedule import format_gameweek, format_schedule
 from fantasy_bot.bot.commands.standings import format_standings
 from fantasy_bot.models import (
@@ -40,7 +40,7 @@ def test_day_points_say_whether_they_can_still_change() -> None:
     assert format_day_points(None) == "No points synced for that day yet."
 
 
-def test_schedule_uses_discord_local_time_and_away_at_home() -> None:
+def test_schedule_shows_date_and_times_in_utc_plus_7_away_at_home() -> None:
     day = DaySchedule(
         3,
         "Gameweek 1 - Day 3",
@@ -50,10 +50,26 @@ def test_schedule_uses_discord_local_time_and_away_at_home() -> None:
         ],
     )
     assert format_schedule(day, {}) == (
-        "**Gameweek 1 - Day 3**\n"
-        "<t:1792785600:t> ATL 132 @ MIL 125 (final)\n"
-        "<t:1792801800:t> NYK @ BOS"
+        "**Gameweek 1 - Day 3** (Sat 24 Oct, UTC+7)\n"
+        "03:00 ATL 132 @ MIL 125 (final)\n"
+        "07:30 NYK @ BOS"
     )
+
+
+def test_game_past_midnight_utc_plus_7_names_its_date() -> None:
+    day = DaySchedule(
+        3,
+        "Gameweek 1 - Day 3",
+        [
+            Game("2026-10-23T12:00:00Z", "MIL", "ATL", None, None, False),
+            Game("2026-10-23T17:30:00Z", "BOS", "NYK", None, None, False),
+        ],
+    )
+    assert format_schedule(day, {}).splitlines() == [
+        "**Gameweek 1 - Day 3** (Fri 23 Oct, UTC+7)",
+        "19:00 ATL @ MIL",
+        "Sat 24 Oct 00:30 NYK @ BOS",
+    ]
 
 
 def test_participants_mark_pending_ones() -> None:
@@ -98,7 +114,7 @@ def test_schedule_shows_team_logo_emojis_once_loaded() -> None:
     )
     icons = {"NYK": "<:nba_NYK:1>", "BOS": "<:nba_BOS:2>"}
     assert format_schedule(day, icons).splitlines()[1] == (
-        "<t:1792801800:t> <:nba_NYK:1> NYK @ <:nba_BOS:2> BOS"
+        "07:30 <:nba_NYK:1> NYK @ <:nba_BOS:2> BOS"
     )
 
 
@@ -119,3 +135,19 @@ def test_long_gameweek_becomes_several_messages_split_at_days() -> None:
     assert len(messages) > 1 and all(len(m) <= 2000 for m in messages)
     assert all(m.startswith("**Gameweek 2 - Day") for m in messages)
     assert sum(m.count("**Gameweek 2 - Day") for m in messages) == 6
+
+
+def test_missing_day_says_the_gameweek_has_no_such_day() -> None:
+    assert format_schedule(None, {}) == "That gameweek has no such day."
+
+
+def test_gameweek_points_list_each_day_and_handle_an_unplayed_week() -> None:
+    days = [
+        DayPoints(d, f"Gameweek 1 - Day {d}", True, [DayPointsRow(1, GO, 100 * d, 300 * d)])
+        for d in (1, 2)
+    ]
+    assert format_gameweek_points(days) == [
+        "**Gameweek 1 - Day 1** (final)\n1. 🏆 GO-GO Team (settakarn) 10.0 pts (season 30.0)\n\n"
+        "**Gameweek 1 - Day 2** (final)\n1. 🏆 GO-GO Team (settakarn) 20.0 pts (season 60.0)"
+    ]
+    assert format_gameweek_points([]) == ["No points synced for that gameweek yet."]

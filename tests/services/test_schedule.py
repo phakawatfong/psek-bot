@@ -3,7 +3,12 @@ import sqlite3
 import pytest
 
 from fantasy_bot.models import DaySchedule, Game
-from fantasy_bot.services.schedule import get_gameweek_schedule, get_schedule
+from fantasy_bot.services.schedule import (
+    current_gameweek,
+    get_day_schedule,
+    get_gameweek_schedule,
+    get_upcoming_day_schedule,
+)
 
 SEASON = "2026-27"
 
@@ -30,8 +35,8 @@ def with_games(seeded: sqlite3.Connection) -> sqlite3.Connection:
     return seeded
 
 
-def test_default_day_is_the_next_unfinished_one(with_games: sqlite3.Connection) -> None:
-    assert get_schedule(with_games, SEASON) == DaySchedule(
+def test_day_number_counts_within_the_gameweek(with_games: sqlite3.Connection) -> None:
+    assert get_day_schedule(with_games, SEASON, 3, gameweek=1) == DaySchedule(
         3,
         "Gameweek 1 - Day 3",
         [
@@ -42,15 +47,33 @@ def test_default_day_is_the_next_unfinished_one(with_games: sqlite3.Connection) 
 
 
 def test_day_without_synced_games_is_empty(with_games: sqlite3.Connection) -> None:
-    assert get_schedule(with_games, SEASON, 1) == DaySchedule(1, "Gameweek 1 - Day 1", [])
+    assert get_day_schedule(with_games, SEASON, 1) == DaySchedule(1, "Gameweek 1 - Day 1", [])
 
 
-def test_unknown_day_has_no_schedule(with_games: sqlite3.Connection) -> None:
-    assert get_schedule(with_games, SEASON, 99) is None
+def test_day_or_gameweek_that_does_not_exist_has_no_schedule(
+    with_games: sqlite3.Connection,
+) -> None:
+    assert get_day_schedule(with_games, SEASON, 4) is None
+    assert get_day_schedule(with_games, SEASON, 1, gameweek=9) is None
+
+
+def test_current_gameweek_holds_the_next_unfinished_day(with_games: sqlite3.Connection) -> None:
+    # Days 1-2 are finished, day 3 is not: all three are gameweek 1.
+    assert current_gameweek(with_games, SEASON) == 1
 
 
 def test_gameweek_schedule_lists_every_day_in_order(with_games: sqlite3.Connection) -> None:
-    week = get_gameweek_schedule(with_games, SEASON, 1)
-    assert week is not None
+    week = get_gameweek_schedule(with_games, SEASON)  # default: the current gameweek
+    assert week is not None and week.gameweek == 1
     assert [(d.day_id, len(d.games)) for d in week.days] == [(1, 0), (2, 0), (3, 2)]
     assert get_gameweek_schedule(with_games, SEASON, 9) is None
+
+
+def test_upcoming_day_is_the_first_one_not_finished(with_games: sqlite3.Connection) -> None:
+    # Day 3 has one game played and one to come: still upcoming, not yesterday's news.
+    upcoming = get_upcoming_day_schedule(with_games, SEASON)
+    assert upcoming is not None and (upcoming.day_id, len(upcoming.games)) == (3, 2)
+
+
+def test_no_days_means_no_upcoming_day(conn: sqlite3.Connection) -> None:
+    assert get_upcoming_day_schedule(conn, SEASON) is None

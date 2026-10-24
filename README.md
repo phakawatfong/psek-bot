@@ -54,9 +54,9 @@ every name starts with `psek-nba-`.
 | Command | Shows |
 |---|---|
 | `/psek-nba-standings [gameweek]` | Teams ranked by season points (or one gameweek), with the gap to the leader |
-| `/psek-nba-points [day]` | Each team's points on one day (default: latest) and season total, marked live or final |
+| `/psek-nba-points [gameweek] [day]` | Each team's points on the latest day, one day of a gameweek (`day:1` = its first day), or every played day of a gameweek, with season totals, marked live or final |
 | `/psek-nba-chart` | A picture of every team's season points growing day by day, with gameweek boundaries |
-| `/psek-nba-schedule [day] [gameweek]` | NBA games for a day (default: next unfinished) or a whole gameweek, with team logos, in each reader's local time |
+| `/psek-nba-schedule [gameweek] [day]` | NBA games for the upcoming day (the first not yet finished), a whole gameweek, or one day of it (`day:1` = its first day), with team logos and dates and times in UTC+7 |
 | `/psek-nba-participants` | Registered teams, entry ids, the gameweek each joined, and who is still pending |
 | `/psek-nba-money [gameweek]` | Season money over every final week plus the current week so far, or one week's pool |
 

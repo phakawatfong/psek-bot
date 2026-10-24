@@ -2,7 +2,13 @@ import sqlite3
 
 from fantasy_bot.models import DayPointsRow, ParticipantName, StandingRow
 from fantasy_bot.services.participants import list_participants
-from fantasy_bot.services.standings import get_day_points, get_points_history, get_standings
+from fantasy_bot.services.standings import (
+    get_day_points,
+    get_day_points_in_week,
+    get_gameweek_points,
+    get_points_history,
+    get_standings,
+)
 
 SEASON = "2026-27"
 
@@ -40,8 +46,7 @@ def test_day_points_default_to_latest_day_and_share_ranks_on_ties(
         DayPointsRow(1, named("Bravo"), 400, 900),
         DayPointsRow(2, named("Alpha"), 300, 700),
         DayPointsRow(2, named("Charlie"), 300, 500),
-        DayPointsRow(4, named("Delta"), 0, 0),
-    ]
+    ]  # Delta has no points synced for the day, so it isn't ranked last with 0
 
 
 def test_unknown_day_has_no_points(seeded: sqlite3.Connection) -> None:
@@ -70,3 +75,30 @@ def test_points_history_has_one_series_per_approved_team_with_data(
         ("Charlie", [1, 2], [200, 500]),
     ]
     assert history.gameweek_of_day == {1: 1, 2: 1}
+
+
+def test_day_number_counts_within_the_current_or_given_gameweek(
+    seeded: sqlite3.Connection,
+) -> None:
+    # Days 1 and 2 are gameweek 1; with nothing unfinished, gameweek 1 is current.
+    assert [
+        (r.day_id, r.day_name) if r else None
+        for r in (
+            get_day_points_in_week(seeded, SEASON, 2),
+            get_day_points_in_week(seeded, SEASON, 1, gameweek=1),
+            get_day_points_in_week(seeded, SEASON, 3),
+            get_day_points_in_week(seeded, SEASON, 0),
+            get_day_points_in_week(seeded, SEASON, 1, gameweek=4),
+        )
+    ] == [(2, "Gameweek 1 - Day 2"), (1, "Gameweek 1 - Day 1"), None, None, None]
+
+
+def test_gameweek_points_cover_only_days_already_played(seeded: sqlite3.Connection) -> None:
+    seeded.execute(
+        "INSERT INTO day (season_id, day_id, gameweek, name, deadline_time, finished,"
+        " data_checked) VALUES (?, 3, 1, 'Gameweek 1 - Day 3', '2026-10-27T18:00:00Z', 0, 0)",
+        (SEASON,),
+    )
+    assert [d.day_id for d in get_gameweek_points(seeded, SEASON, 1)] == [1, 2]
+    assert [d.day_id for d in get_gameweek_points(seeded, SEASON)] == [1, 2]
+    assert get_gameweek_points(seeded, SEASON, 5) == []

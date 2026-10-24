@@ -54,11 +54,12 @@ def gameweek_table(conn: sqlite3.Connection, season_id: str, gameweek: int) -> l
 
 
 def day_table(conn: sqlite3.Connection, season_id: str, day_id: int) -> list[DayPointsRow]:
+    """Teams that played on `day_id`. A team that hadn't started yet has no row that day and is
+    left out, rather than shown as scoring 0."""
     rows = conn.execute(
-        f"SELECT RANK() OVER (ORDER BY COALESCE(f.points, 0) DESC), {NAMES},"
-        " COALESCE(f.points, 0), COALESCE(f.total_points, 0)"
+        f"SELECT RANK() OVER (ORDER BY f.points DESC), {NAMES}, f.points, f.total_points"
         f" FROM {PARTICIPANTS}"
-        " LEFT JOIN fact_entry_day f"
+        " JOIN fact_entry_day f"
         "  ON f.season_id = p.season_id AND f.entry_id = p.entry_id AND f.day_id = ?"
         " WHERE p.season_id = ? AND p.status = 'approved' ORDER BY 1, 2",
         (day_id, season_id),
