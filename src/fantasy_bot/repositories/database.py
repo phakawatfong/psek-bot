@@ -1,8 +1,12 @@
 import sqlite3
+from contextlib import closing
+from datetime import date
 from importlib.resources import files
 from importlib.resources.abc import Traversable
+from pathlib import Path
 
 MIGRATIONS = files(__package__) / "migrations"
+BACKUPS_KEPT = 14
 
 
 def connect(path: str) -> sqlite3.Connection:
@@ -31,3 +35,21 @@ def migrate(conn: sqlite3.Connection, migrations: Traversable = MIGRATIONS) -> i
             raise
         current = version
     return current
+
+
+def backup(conn: sqlite3.Connection, directory: Path, today: date) -> Path:
+    """Copy the database to `directory/bot-YYYY-MM-DD.db`, keeping the newest BACKUPS_KEPT.
+
+    SQLite's backup API takes a consistent copy even while the bot is writing; copying the
+    file directly could catch it half-written.
+    """
+    if conn.in_transaction:
+        # SQLite's backup waits forever on a lock this same connection holds.
+        raise RuntimeError("commit or roll back before backing up")
+    directory.mkdir(parents=True, exist_ok=True)
+    target = directory / f"bot-{today.isoformat()}.db"
+    with closing(sqlite3.connect(target)) as copy:
+        conn.backup(copy)
+    for old in sorted(directory.glob("bot-*.db"))[:-BACKUPS_KEPT]:
+        old.unlink()
+    return target

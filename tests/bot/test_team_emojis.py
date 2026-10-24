@@ -28,7 +28,7 @@ class FakeClient:
 
     async def create_application_emoji(self, *, name: str, image: bytes) -> FakeEmoji:
         if name in self.reject:
-            raise discord.HTTPException(FakeResponse(), "rejected")  # type: ignore[arg-type]
+            raise discord.HTTPException(FakeResponse(), "rejected")
         self.uploaded.append(name)
         return FakeEmoji(name, 100 + len(self.uploaded))
 

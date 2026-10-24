@@ -17,12 +17,17 @@ COPY README.md ./
 COPY src ./src
 RUN --mount=type=cache,target=/root/.cache/uv uv sync --frozen --no-dev --no-editable
 
-RUN useradd --system --uid 10001 bot && mkdir /data && chown bot /data
+RUN useradd --system --uid 10001 bot && mkdir /data /app/.matplotlib && chown bot /data /app/.matplotlib
 USER bot
 
 ENV PATH="/app/.venv/bin:$PATH" \
     DB_PATH=/data/bot.db \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    MPLCONFIGDIR=/app/.matplotlib
+
+# The bot user has no home folder, so matplotlib's font cache lives here, built once at build
+# time instead of on every container start.
+RUN python -c "import matplotlib.font_manager"
 VOLUME /data
 
 ENTRYPOINT ["fantasy-bot"]

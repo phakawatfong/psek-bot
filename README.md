@@ -44,7 +44,43 @@ docker compose logs -f bot
 ```
 
 The database lives in the `bot-data` volume at `/data/bot.db`, so it survives rebuilds.
-Deploying to a server is the same three commands after copying the repo and `.env` there.
+
+## Deploy to AWS Lightsail
+
+One small Ubuntu server running the container. The bot only makes outgoing connections, so the
+server needs no open ports except SSH.
+
+1. **In AWS** (once): set a Budget alert (e.g. $10/month). Create a Lightsail instance:
+   Linux/Unix, **Ubuntu 24.04**, the smallest plan **with IPv4**, region Singapore. Paste
+   `deploy/setup.sh` into **Add launch script**, turn on **automatic snapshots**, and attach a
+   static IP. In the instance's Networking tab keep only SSH (22), ideally limited to your IP.
+2. **Wait** a few minutes for the launch script; it logs to `/var/log/cloud-init-output.log`.
+   (Without a launch script, SSH in and run `curl -fsSL
+   https://raw.githubusercontent.com/phakawatfong/psek-bot/main/deploy/setup.sh | sudo bash`.)
+3. **Copy secrets and start**, from your computer:
+
+   ```bash
+   scp .env ubuntu@<server-ip>:/opt/psek-bot/.env
+   ssh ubuntu@<server-ip> 'chmod 600 /opt/psek-bot/.env && cd /opt/psek-bot && docker compose up -d --build'
+   ```
+
+4. **Optional: bring your local data** (registered participants) instead of starting empty:
+
+   ```bash
+   scp bot.db ubuntu@<server-ip>:/tmp/bot.db
+   ssh ubuntu@<server-ip> 'cd /opt/psek-bot && docker compose stop bot && docker compose cp /tmp/bot.db bot:/data/bot.db && docker compose start bot'
+   ```
+
+Stop any bot you run locally first: two processes with the same token both answer commands.
+
+**Update** to the latest code: `ssh ubuntu@<server-ip> 'cd /opt/psek-bot && git pull && docker
+compose up -d --build'`. **Logs**: `docker compose logs -f bot` (capped at 30MB).
+
+**Backups**: Lightsail snapshots the whole server daily. Separately, cron runs `fantasy-bot
+backup` at 03:00 UTC, writing `/data/backups/bot-YYYY-MM-DD.db` in the volume and keeping 14
+days. To restore one: `docker compose stop bot`, copy the chosen backup over `/data/bot.db`
+(`docker compose run --rm --entrypoint cp bot /data/backups/bot-2026-10-25.db /data/bot.db`),
+then `docker compose start bot`.
 
 ## Commands
 
