@@ -13,11 +13,12 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fantasy_bot.clients import nbafantasy as api
-from fantasy_bot.models import Day, Entry, SyncResult
+from fantasy_bot.models import Day, Entry, LeagueTeam, SyncResult
 from fantasy_bot.repositories import sync as repo
 
 Fetch = Callable[[str], Awaitable[Any]]
 SCHEDULE_REFRESH = timedelta(hours=6)
+MAX_LEAGUE_PAGES = 5  # 50 teams a page; a friends league is one page
 
 log = logging.getLogger(__name__)
 
@@ -46,6 +47,7 @@ async def _sync(
     stamp = now.isoformat()
     boot_raw = await fetch(api.bootstrap_path())
     boot = api.parse_bootstrap(boot_raw)
+    league_teams = await _fetch_league(fetch, repo.league_id(conn, season_id))
     entries = await _fetch_entries(fetch, repo.tracked_entry_ids(conn, season_id))
 
     with conn:
@@ -53,6 +55,7 @@ async def _sync(
         repo.upsert_teams(conn, season_id, boot.teams)
         repo.upsert_players(conn, season_id, boot.players)
         repo.upsert_days(conn, season_id, boot.days)
+        repo.upsert_league_teams(conn, season_id, league_teams)
         repo.upsert_entries(conn, season_id, entries)
 
     await _sync_season_schedule(conn, fetch, season_id, now)
@@ -77,6 +80,17 @@ async def _sync(
     for m in mismatches:
         log.warning("entry %s day %s: official %s, rebuilt %s", *vars(m).values())
     return SyncResult([d.day_id for d in synced], len(entries), mismatches)
+
+
+async def _fetch_league(fetch: Fetch, league_id: int) -> list[LeagueTeam]:
+    """Every team in the league, so friends can pick theirs when registering."""
+    teams: list[LeagueTeam] = []
+    for page in range(1, MAX_LEAGUE_PAGES + 1):
+        page_teams, has_next = api.parse_league_page(await fetch(api.league_path(league_id, page)))
+        teams += page_teams
+        if not has_next:
+            break
+    return teams
 
 
 async def _fetch_entries(fetch: Fetch, entry_ids: list[int]) -> list[Entry]:

@@ -86,14 +86,25 @@ def day_info(conn: sqlite3.Connection, season_id: str, day_id: int) -> tuple[str
 
 
 def participant_list(conn: sqlite3.Connection, season_id: str) -> list[ParticipantRow]:
-    rows = conn.execute(
-        f"SELECT {NAMES}, p.entry_id, p.joined_gameweek, p.status FROM {PARTICIPANTS}"
-        " WHERE p.season_id = ? ORDER BY p.status, 1",
+    """Every registered team, then every league team nobody has registered yet."""
+    registered = conn.execute(
+        f"SELECT {NAMES}, p.entry_id, p.status, p.discord_user_id, p.joined_gameweek"
+        f" FROM {PARTICIPANTS} WHERE p.season_id = ? ORDER BY p.status, 1",
+        (season_id,),
+    )
+    unregistered = conn.execute(
+        "SELECT e.entry_name, e.manager_name, e.entry_id FROM entry e"
+        " WHERE e.season_id = ? AND e.entry_id NOT IN"
+        " (SELECT entry_id FROM participant WHERE season_id = e.season_id)"
+        " ORDER BY e.entry_name",
         (season_id,),
     )
     return [
-        ParticipantRow(ParticipantName(t, m), entry_id, joined, status)
-        for t, m, entry_id, joined, status in rows
+        ParticipantRow(ParticipantName(t, m), entry_id, status, user_id, joined)
+        for t, m, entry_id, status, user_id, joined in registered
+    ] + [
+        ParticipantRow(ParticipantName(t, m), entry_id, "unregistered")
+        for t, m, entry_id in unregistered
     ]
 
 

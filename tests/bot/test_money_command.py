@@ -46,8 +46,8 @@ def test_season_lists_totals_then_the_week_in_progress() -> None:
     )
     assert format_season(season) == (
         "**Season after 2 final weeks** (100.00 per week each)\n"
-        "1. jkslots (pisit manoo) paid 200.00, won 320.00, net +120.00\n"
-        "2. GO-GO Team paid 200.00, won 80.00, net -120.00\n"
+        "1. jkslots (pisit manoo) buy-ins 200.00, won 320.00, net +120.00, is owed 120.00\n"
+        "2. GO-GO Team buy-ins 200.00, won 80.00, net -120.00, owes 120.00\n"
         "\n"
         "**Gameweek 3 pool 200.00** (so far, may still change)\n"
         "1. jkslots (pisit manoo) 905.5 pts, wins 150.00, net +50.00\n"
@@ -58,4 +58,18 @@ def test_season_lists_totals_then_the_week_in_progress() -> None:
 def test_season_before_any_final_week() -> None:
     assert format_season(SeasonMoney(10000, [], [], None)) == (
         "**Season after 0 final weeks** (100.00 per week each)\nNo final weeks yet."
+    )
+
+
+def test_recorded_payments_settle_the_balance() -> None:
+    total = SeasonTotal(ParticipantId(1), 2, 20000, 8000, -12000)
+    assert [
+        SeasonMoneyRow(GO, total, paid_in, paid_out).balance
+        for paid_in, paid_out in [(0, 0), (20000, 0), (20000, 8000), (0, 8000)]
+    ] == [-12000, 8000, 0, -20000]
+    assert (
+        format_season(
+            SeasonMoney(10000, [1, 2], [SeasonMoneyRow(GO, total, 20000, 8000)], None)
+        ).splitlines()[1]
+        == "1. GO-GO Team buy-ins 200.00, won 80.00, net -120.00, settled"
     )

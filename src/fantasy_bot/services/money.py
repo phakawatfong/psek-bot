@@ -12,7 +12,7 @@ from fantasy_bot.models import (
     SeasonMoneyRow,
     WeekMoney,
 )
-from fantasy_bot.repositories import pool, seasons, standings
+from fantasy_bot.repositories import pool, registration, seasons, standings
 
 
 def get_week_money(conn: sqlite3.Connection, season_id: str, gameweek: int) -> WeekMoney | None:
@@ -24,17 +24,22 @@ def get_week_money(conn: sqlite3.Connection, season_id: str, gameweek: int) -> W
 
 
 def get_season_money(conn: sqlite3.Connection, season_id: str) -> SeasonMoney:
-    """Totals over every final week, plus the latest week as it stands if it isn't final."""
+    """Totals over every final week, with real payments recorded so far, plus the latest week
+    as it stands if it isn't final."""
     weeks = pool.pool_weeks(conn, season_id)
     split = seasons.payout_split(conn, season_id)
     names = _names(conn, season_id)
     settled = [w for w in weeks if w.final]
     totals = season_totals(settle(w.standings, split) for w in settled)
+    payments = registration.payment_totals(conn, season_id)
     latest = weeks[-1] if weeks else None
     return SeasonMoney(
         weekly_buy_in=pool.weekly_buy_in(conn, season_id),
         settled_weeks=[w.gameweek for w in settled],
-        rows=[SeasonMoneyRow(names[t.participant_id], t) for t in totals],
+        rows=[
+            SeasonMoneyRow(names[t.participant_id], t, *payments.get(t.participant_id, (0, 0)))
+            for t in totals
+        ],
         in_progress=_week_money(latest, split, names) if latest and not latest.final else None,
     )
 

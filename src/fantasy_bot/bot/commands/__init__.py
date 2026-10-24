@@ -3,7 +3,16 @@ from collections.abc import Mapping
 
 from discord import app_commands
 
-from fantasy_bot.bot.commands import chart, money, participants, points, schedule, standings
+from fantasy_bot.bot.commands import (
+    admin,
+    chart,
+    money,
+    participants,
+    points,
+    register,
+    schedule,
+    standings,
+)
 
 PREFIX = "psek-nba"
 
@@ -43,8 +52,20 @@ def register_all(
         ),
         (
             "money",
-            "Show the pool, each payout, and each person's net",
+            "Weekly pools, each person's net, and who still owes or is owed",
             money.handler(conn, season_id),
+        ),
+        ("register", "Join the pool with your nbafantasy team", register.handler(conn, season_id)),
+        # Admin only: visible to members with Manage Server.
+        (
+            "approve",
+            "Approve a registered team into the pool",
+            admin.approve_handler(conn, season_id),
+        ),
+        (
+            "paid",
+            "Record real money paid into or out of the pot",
+            admin.paid_handler(conn, season_id),
         ),
     ]
     for name, description, callback in routes:

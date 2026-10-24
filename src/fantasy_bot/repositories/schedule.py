@@ -49,3 +49,12 @@ def gameweek_of(conn: sqlite3.Connection, season_id: str, day_id: int) -> int | 
         "SELECT gameweek FROM day WHERE season_id = ? AND day_id = ?", (season_id, day_id)
     ).fetchone()
     return row[0] if row else None
+
+
+def gameweek_starts_at(conn: sqlite3.Connection, season_id: str, gameweek: int) -> str | None:
+    """Deadline of the gameweek's first day: once it passes, the week is under way."""
+    starts_at: str | None = conn.execute(
+        "SELECT min(deadline_time) FROM day WHERE season_id = ? AND gameweek = ?",
+        (season_id, gameweek),
+    ).fetchone()[0]
+    return starts_at

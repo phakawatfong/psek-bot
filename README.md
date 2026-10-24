@@ -96,8 +96,11 @@ every name starts with `psek-nba-`.
 | `/psek-nba-points [gameweek] [day]` | Each team's points on the latest day, one day of a gameweek (`day:1` = its first day), or every played day of a gameweek, with season totals, marked live or final |
 | `/psek-nba-chart` | A picture of every team's season points growing day by day, with gameweek boundaries |
 | `/psek-nba-schedule [gameweek] [day]` | NBA games for the upcoming day (the first not yet finished), a whole gameweek, or one day of it (`day:1` = its first day), with team logos and dates and times in UTC+7 |
-| `/psek-nba-participants` | Registered teams, entry ids, the gameweek each joined, and who is still pending |
+| `/psek-nba-participants` | Every team in the league: in the pool, waiting for approval, or not registered yet, with who registered each |
 | `/psek-nba-money [gameweek]` | Season money over every final week plus the current week so far, or one week's pool |
+| `/psek-nba-register team` | Join the pool: start typing your nbafantasy team and pick it |
+| `/psek-nba-approve team [from_gameweek]` | Admin: let a registered team into the pool, optionally from an earlier gameweek |
+| `/psek-nba-paid team amount [direction] [note]` | Admin: record real money paid into (`in`) or out of (`out`) the pot |
 
 ## Team logos
 
@@ -106,6 +109,34 @@ team logos as its own application emojis, named `nba_ATL`, `nba_BOS`, and so on.
 the bot, so they work in every server without any server permission, and later starts reuse
 them. You can see or delete them in the Developer Portal under your application's **Emojis**
 tab. Logos come from ESPN's public image CDN; if one can't be fetched, that team shows its code.
+
+## Registering friends
+
+1. Each friend runs `/psek-nba-register` and picks their team from the dropdown, which lists every
+   team in the league (refreshed each sync). It records their Discord account and marks them
+   pending, starting from the next gameweek, or the current one if it hasn't started.
+2. An admin runs `/psek-nba-approve`. Use `from_gameweek:1` to backdate friends who were in from
+   the start.
+3. A team entered by hand with a placeholder Discord id is claimed by the first friend who
+   registers it: only its Discord id changes, its approval and start week stay. A team already
+   linked to a real account can't be taken by someone else.
+
+Record real money with `/psek-nba-paid` as it moves. `/psek-nba-money` then shows, for each
+person, whether they owe the pot, are owed by it, or are settled: their season net, plus what
+they paid in, minus what they were paid out.
+
+## Who is an admin
+
+Discord decides, not the bot: it checks before a command ever reaches the bot. By default
+`/psek-nba-approve` and `/psek-nba-paid` work only for the server owner and members of a role with
+the **Manage Server** permission, and everyone else doesn't even see them.
+
+To see who that is: **Server Settings > Roles**, open each role, and look for Manage Server.
+
+To make someone an admin of the pool without giving them Manage Server (which also lets them
+change the whole server): **Server Settings > Integrations >** the bot **>** `/psek-nba-approve`
+(and again for `/psek-nba-paid`) **> Add Roles or Members**, and allow a role such as "Pool admin"
+or the people themselves. Discord applies these overrides, so nothing in the bot changes.
 
 ## Weekly pool
 

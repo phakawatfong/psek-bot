@@ -19,6 +19,7 @@ FIXTURES = Path(__file__).parents[1] / "fixtures" / "nbafantasy"
 # Real nbafantasy responses for day 4, trimmed to one entry's ten players.
 RESPONSES = {
     "bootstrap-static/": "bootstrap.json",
+    "leagues-classic/14/standings/?page_standings=1": "league_14.json",
     "fixtures/": "fixtures_4.json",  # the whole season; day 4 is all the trimmed data has
     "fixtures/?event=4": "fixtures_4.json",
     "event/4/live/": "live_4.json",
@@ -78,7 +79,11 @@ def test_final_day_is_not_fetched_again(conn: sqlite3.Connection) -> None:
     sync(conn, FakeApi())
     second = FakeApi()
     assert sync(conn, second).days_synced == []
-    assert second.calls == ["bootstrap-static/", "entry/34409/"]
+    assert second.calls == [
+        "bootstrap-static/",
+        "leagues-classic/14/standings/?page_standings=1",
+        "entry/34409/",
+    ]
 
 
 def test_days_before_their_deadline_are_skipped(conn: sqlite3.Connection) -> None:
@@ -114,7 +119,12 @@ def test_friend_registered_after_day_is_final_gets_backfilled(conn: sqlite3.Conn
     )
     late = FakeApi()
     assert sync(conn, late) == SyncResult(days_synced=[4], entries=1, mismatches=[])
-    assert late.calls == ["bootstrap-static/", "entry/34409/", "entry/34409/event/4/picks/"]
+    assert late.calls == [
+        "bootstrap-static/",
+        "leagues-classic/14/standings/?page_standings=1",
+        "entry/34409/",
+        "entry/34409/event/4/picks/",
+    ]
     assert one(conn, "SELECT official, computed FROM v_entry_day_reconcile") == (130, 130)
 
 
@@ -122,7 +132,12 @@ def test_upcoming_day_gets_its_schedule_but_no_points(conn: sqlite3.Connection) 
     track(conn, 34409)
     api = FakeApi()
     assert sync(conn, api, now=BEFORE_DAY_4).days_synced == []
-    assert api.calls == ["bootstrap-static/", "entry/34409/", "fixtures/"]
+    assert api.calls == [
+        "bootstrap-static/",
+        "leagues-classic/14/standings/?page_standings=1",
+        "entry/34409/",
+        "fixtures/",
+    ]
     assert one(conn, "SELECT count(*), (SELECT count(*) FROM fact_entry_day) FROM fixture") == (
         12,
         0,
@@ -136,3 +151,13 @@ def test_season_schedule_is_refreshed_every_six_hours_only(conn: sqlite3.Connect
     sync(conn, soon, now=AFTER_DAY_4 + timedelta(hours=5))
     sync(conn, later, now=AFTER_DAY_4 + timedelta(hours=6))
     assert ("fixtures/" in soon.calls, "fixtures/" in later.calls) == (False, True)
+
+
+def test_every_team_in_the_league_is_listed_for_registering(conn: sqlite3.Connection) -> None:
+    track(conn)  # nobody registered yet
+    sync(conn, FakeApi())
+    rows = conn.execute("SELECT entry_id, entry_name, manager_name FROM entry ORDER BY entry_id")
+    assert [tuple(r) for r in rows] == [
+        (34409, "Test Team", "Test Manager"),
+        (55555, "Other Team", "Other Manager"),
+    ]

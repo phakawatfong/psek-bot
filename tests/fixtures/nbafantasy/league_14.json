@@ -1,0 +1,12 @@
+{
+ "league": {"id": 14, "name": "Test League", "league_type": "x"},
+ "new_entries": {"has_next": false, "page": 1, "results": []},
+ "standings": {
+  "has_next": false,
+  "page": 1,
+  "results": [
+   {"id": 1, "entry": 34409, "entry_name": "Test Team", "player_name": "Test Manager", "rank": 1, "last_rank": 1, "rank_sort": 1, "total": 7710, "event_total": 130, "has_played": true},
+   {"id": 2, "entry": 55555, "entry_name": "Other Team", "player_name": "Other Manager", "rank": 2, "last_rank": 2, "rank_sort": 2, "total": 7000, "event_total": 100, "has_played": true}
+  ]
+ }
+}

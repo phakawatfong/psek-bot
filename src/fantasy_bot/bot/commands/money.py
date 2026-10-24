@@ -14,6 +14,15 @@ def signed(minor: int) -> str:
     return f"{'+' if minor >= 0 else ''}{money(minor)}"
 
 
+def settle_up(balance: int) -> str:
+    """What's left to settle once recorded payments count: buy-ins owed, winnings unpaid."""
+    if balance > 0:
+        return f"is owed {money(balance)}"
+    if balance < 0:
+        return f"owes {money(-balance)}"
+    return "settled"
+
+
 def format_week(week: WeekMoney | None) -> str:
     if week is None:
         return "No points synced for that gameweek yet."
@@ -35,8 +44,8 @@ def format_season(season: SeasonMoney) -> str:
         f" ({money(season.weekly_buy_in)} per week each)"
     )
     rows = [
-        f"{i}. {display_name(r.name)} paid {money(r.total.paid)},"
-        f" won {money(r.total.won)}, net {signed(r.total.net)}"
+        f"{i}. {display_name(r.name)} buy-ins {money(r.total.paid)},"
+        f" won {money(r.total.won)}, net {signed(r.total.net)}, {settle_up(r.balance)}"
         for i, r in enumerate(season.rows, start=1)
     ] or ["No final weeks yet."]
     parts = ["\n".join([title, *rows])]

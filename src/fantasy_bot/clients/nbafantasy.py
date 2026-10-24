@@ -15,6 +15,7 @@ from fantasy_bot.clients.nbafantasy_payloads import (
     BootstrapPayload,
     EntryPayload,
     FixturePayload,
+    LeagueStandingsPayload,
     LivePayload,
     PicksPayload,
 )
@@ -24,6 +25,7 @@ from fantasy_bot.models import (
     Entry,
     EntryDay,
     Fixture,
+    LeagueTeam,
     Pick,
     Player,
     PlayerStat,
@@ -93,6 +95,10 @@ def fixtures_path(day_id: int) -> str:
 
 def season_fixtures_path() -> str:
     return "fixtures/"
+
+
+def league_path(league_id: int, page: int) -> str:
+    return f"leagues-classic/{league_id}/standings/?page_standings={page}"
 
 
 def live_path(day_id: int) -> str:
@@ -201,3 +207,10 @@ def parse_picks(raw: Any, entry_id: int, day_id: int) -> tuple[EntryDay, list[Pi
         for p in payload.picks
     ]
     return entry_day, picks
+
+
+def parse_league_page(raw: Any) -> tuple[list[LeagueTeam], bool]:
+    """One page of a league's teams, and whether another page follows."""
+    page = LeagueStandingsPayload.model_validate(raw).standings
+    teams = [LeagueTeam(r.entry, r.entry_name, r.player_name) for r in page.results]
+    return teams, page.has_next

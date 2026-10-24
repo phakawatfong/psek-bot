@@ -11,6 +11,7 @@ from fantasy_bot.models import (
     Entry,
     EntryDay,
     Fixture,
+    LeagueTeam,
     Mismatch,
     Pick,
     Player,
@@ -52,6 +53,25 @@ def upsert_fixtures(conn: sqlite3.Connection, season_id: str, rows: Sequence[Fix
 
 def upsert_entries(conn: sqlite3.Connection, season_id: str, rows: Sequence[Entry]) -> None:
     _upsert(conn, "entry", ("entry_id",), season_id, rows)
+
+
+def upsert_league_teams(
+    conn: sqlite3.Connection, season_id: str, rows: Sequence[LeagueTeam]
+) -> None:
+    """Names of every team in the league; leaves started_day to the per-entry fetch."""
+    conn.executemany(
+        "INSERT INTO entry (season_id, entry_id, entry_name, manager_name) VALUES (?, ?, ?, ?)"
+        " ON CONFLICT (season_id, entry_id) DO UPDATE"
+        " SET entry_name = excluded.entry_name, manager_name = excluded.manager_name",
+        [(season_id, t.entry_id, t.entry_name, t.manager_name) for t in rows],
+    )
+
+
+def league_id(conn: sqlite3.Connection, season_id: str) -> int:
+    value: int = conn.execute(
+        "SELECT league_id FROM season WHERE season_id = ?", (season_id,)
+    ).fetchone()[0]
+    return value
 
 
 def upsert_entry_day(conn: sqlite3.Connection, season_id: str, row: EntryDay) -> None:

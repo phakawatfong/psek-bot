@@ -123,3 +123,21 @@ class PickPayload(Payload):
 class PicksPayload(Payload):
     entry_history: EntryHistoryPayload
     picks: list[PickPayload]
+
+
+# leagues-classic/N/standings/?page_standings=P
+
+
+class LeagueStandingRowPayload(Payload):
+    entry: int
+    entry_name: str
+    player_name: str
+
+
+class LeagueStandingsPagePayload(Payload):
+    has_next: bool
+    results: list[LeagueStandingRowPayload]
+
+
+class LeagueStandingsPayload(Payload):
+    standings: LeagueStandingsPagePayload

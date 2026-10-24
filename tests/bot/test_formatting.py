@@ -72,14 +72,25 @@ def test_game_past_midnight_utc_plus_7_names_its_date() -> None:
     ]
 
 
-def test_participants_mark_pending_ones() -> None:
+def test_participants_group_every_league_team_and_show_who_owns_it() -> None:
     rows = [
-        ParticipantRow(JK, 31818, 1, "approved"),
-        ParticipantRow(ParticipantName("entry 40823", ""), 40823, 3, "pending"),
+        ParticipantRow(JK, 31818, "approved", 312345678901234567, 1),
+        ParticipantRow(GO, 40823, "approved", 2, 1),  # entered by hand: placeholder id
+        ParticipantRow(ParticipantName("Dream team", ""), 40791, "pending", 412345678901234567, 2),
+        ParticipantRow(ParticipantName("Bench Mob", "x"), 55555, "unregistered"),
     ]
     assert format_participants(rows) == (
-        "**Participants (2)**\n- jkslots (pisit manoo)\n- entry 40823 (pending approval)"
+        "**In the pool**\n"
+        "- jkslots (pisit manoo), <@312345678901234567>\n"
+        "- GO-GO Team (settakarn), not linked to Discord yet\n"
+        "\n"
+        "**Waiting for approval**\n"
+        "- Dream team, <@412345678901234567>\n"
+        "\n"
+        "**Not registered yet**\n"
+        "- Bench Mob (x)"
     )
+    assert format_participants([]).startswith("No teams yet")
 
 
 def test_ties_share_the_first_and_last_badges() -> None:

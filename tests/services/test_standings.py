@@ -64,6 +64,20 @@ def test_participants_list_approved_then_pending(seeded: sqlite3.Connection) -> 
     ]
 
 
+def test_league_teams_nobody_registered_are_listed_last(seeded: sqlite3.Connection) -> None:
+    seeded.execute(
+        "INSERT INTO entry (season_id, entry_id, entry_name, manager_name)"
+        " VALUES (?, 106, 'Foxtrot', 'fox')",
+        (SEASON,),
+    )
+    last = list_participants(seeded, SEASON)[-1]
+    assert (last.name.team_name, last.status, last.discord_user_id) == (
+        "Foxtrot",
+        "unregistered",
+        None,
+    )
+
+
 def test_points_history_has_one_series_per_approved_team_with_data(
     seeded: sqlite3.Connection,
 ) -> None:

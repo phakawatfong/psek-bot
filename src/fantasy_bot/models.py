@@ -3,6 +3,9 @@ from typing import NewType
 
 ParticipantId = NewType("ParticipantId", int)
 
+# Real Discord user ids are 17-20 digits, so anything below this was typed in by hand.
+PLACEHOLDER_MAX_ID = 10**15
+
 
 @dataclass(frozen=True)
 class Standing:
@@ -60,6 +63,21 @@ class SeasonTotal:
 class SeasonMoneyRow:
     name: ParticipantName
     total: SeasonTotal
+    paid_in: int = 0  # real money recorded with /psek-nba-paid
+    paid_out: int = 0
+
+    @property
+    def balance(self) -> int:
+        """Above 0: the pot owes them this much. Below 0: they owe the pot."""
+        return self.total.net + self.paid_in - self.paid_out
+
+
+@dataclass(frozen=True)
+class Registration:
+    participant_id: ParticipantId
+    discord_user_id: int
+    entry_id: int
+    status: str  # 'pending' or 'approved'
 
 
 @dataclass(frozen=True)
@@ -134,8 +152,9 @@ class GameweekSchedule:
 class ParticipantRow:
     name: ParticipantName
     entry_id: int
-    joined_gameweek: int
-    status: str
+    status: str  # 'approved', 'pending', or 'unregistered' for a league team nobody claimed
+    discord_user_id: int | None = None  # None until registered
+    joined_gameweek: int | None = None
 
 
 # nbafantasy rows. Field names match the table columns in repositories/migrations.
@@ -197,6 +216,13 @@ class Entry:
     entry_name: str
     manager_name: str
     started_day: int
+
+
+@dataclass(frozen=True)
+class LeagueTeam:
+    entry_id: int
+    entry_name: str
+    manager_name: str
 
 
 @dataclass(frozen=True)
