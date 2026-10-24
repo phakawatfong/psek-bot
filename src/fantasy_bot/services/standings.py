@@ -1,6 +1,6 @@
 import sqlite3
 
-from fantasy_bot.models import DayPoints, StandingRow
+from fantasy_bot.models import DayPoints, PointsHistory, StandingRow
 from fantasy_bot.repositories import standings
 
 
@@ -23,3 +23,10 @@ def get_day_points(
         return None
     name, final = info
     return DayPoints(day_id, name, final, standings.day_table(conn, season_id, day_id))
+
+
+def get_points_history(conn: sqlite3.Connection, season_id: str) -> PointsHistory:
+    """Every approved team's season total after each synced day, for the points chart."""
+    return PointsHistory(
+        standings.daily_totals(conn, season_id), standings.gameweek_of_day(conn, season_id)
+    )

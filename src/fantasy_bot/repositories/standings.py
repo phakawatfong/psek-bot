@@ -1,10 +1,12 @@
 import sqlite3
+from itertools import groupby
 
 from fantasy_bot.models import (
     DayPointsRow,
     ParticipantId,
     ParticipantName,
     ParticipantRow,
+    PointsSeries,
     StandingRow,
 )
 
@@ -92,3 +94,29 @@ def participant_list(conn: sqlite3.Connection, season_id: str) -> list[Participa
         ParticipantRow(ParticipantName(t, m), entry_id, joined, status)
         for t, m, entry_id, joined, status in rows
     ]
+
+
+def daily_totals(conn: sqlite3.Connection, season_id: str) -> list[PointsSeries]:
+    """Each approved team's season total after every synced day, in participant order."""
+    rows = conn.execute(
+        f"SELECT p.participant_id, {NAMES}, f.day_id, f.total_points FROM {PARTICIPANTS}"
+        " JOIN fact_entry_day f ON f.season_id = p.season_id AND f.entry_id = p.entry_id"
+        " WHERE p.season_id = ? AND p.status = 'approved'"
+        " ORDER BY p.participant_id, f.day_id",
+        (season_id,),
+    ).fetchall()
+    return [
+        PointsSeries(
+            ParticipantId(pid),
+            ParticipantName(group[0][1], group[0][2]),
+            [day for *_, day, _ in group],
+            [total for *_, total in group],
+        )
+        for pid, rows_of_pid in groupby(rows, key=lambda r: r[0])
+        for group in [list(rows_of_pid)]
+    ]
+
+
+def gameweek_of_day(conn: sqlite3.Connection, season_id: str) -> dict[int, int]:
+    rows = conn.execute("SELECT day_id, gameweek FROM day WHERE season_id = ?", (season_id,))
+    return {day_id: gameweek for day_id, gameweek in rows}

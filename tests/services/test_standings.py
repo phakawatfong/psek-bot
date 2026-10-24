@@ -2,7 +2,7 @@ import sqlite3
 
 from fantasy_bot.models import DayPointsRow, ParticipantName, StandingRow
 from fantasy_bot.services.participants import list_participants
-from fantasy_bot.services.standings import get_day_points, get_standings
+from fantasy_bot.services.standings import get_day_points, get_points_history, get_standings
 
 SEASON = "2026-27"
 
@@ -57,3 +57,16 @@ def test_participants_list_approved_then_pending(seeded: sqlite3.Connection) -> 
         ("Delta", 104, "approved"),
         ("Echo", 105, "pending"),
     ]
+
+
+def test_points_history_has_one_series_per_approved_team_with_data(
+    seeded: sqlite3.Connection,
+) -> None:
+    history = get_points_history(seeded, SEASON)
+    # Delta has no synced days and pending Echo is not shown; order follows registration.
+    assert [(s.name.team_name, s.days, s.totals) for s in history.series] == [
+        ("Alpha", [1, 2], [400, 700]),
+        ("Bravo", [1, 2], [500, 900]),
+        ("Charlie", [1, 2], [200, 500]),
+    ]
+    assert history.gameweek_of_day == {1: 1, 2: 1}

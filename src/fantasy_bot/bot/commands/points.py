@@ -5,7 +5,7 @@ from typing import Any
 import discord
 from discord import app_commands
 
-from fantasy_bot.bot.commands.formatting import display_name, points
+from fantasy_bot.bot.commands.formatting import display_name, points, ranked
 from fantasy_bot.models import DayPoints
 from fantasy_bot.services.standings import get_day_points
 
@@ -14,8 +14,10 @@ def format_day_points(report: DayPoints | None) -> str:
     if report is None:
         return "No points synced for that day yet."
     status = "final" if report.final else "live, may still change"
+    last = report.rows[-1].rank if report.rows else 0
     lines = [
-        f"{r.rank}. {display_name(r.name)} {points(r.points)} pts (season {points(r.total_points)})"
+        f"{ranked(r.rank, last)}{display_name(r.name)} {points(r.points)} pts"
+        f" (season {points(r.total_points)})"
         for r in report.rows
     ]
     return "\n".join([f"**{report.day_name}** ({status})", *lines])

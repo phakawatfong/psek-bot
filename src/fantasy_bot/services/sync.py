@@ -9,7 +9,7 @@ import logging
 import sqlite3
 from collections.abc import Awaitable, Callable
 from contextlib import suppress
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fantasy_bot.clients import nbafantasy as api
@@ -17,6 +17,7 @@ from fantasy_bot.models import Day, Entry, SyncResult
 from fantasy_bot.repositories import sync as repo
 
 Fetch = Callable[[str], Awaitable[Any]]
+SCHEDULE_REFRESH = timedelta(hours=6)
 
 log = logging.getLogger(__name__)
 
@@ -54,6 +55,7 @@ async def _sync(
         repo.upsert_days(conn, season_id, boot.days)
         repo.upsert_entries(conn, season_id, entries)
 
+    await _sync_season_schedule(conn, fetch, season_id, now)
     final = repo.final_day_ids(conn, season_id)
     stored = repo.synced_entry_days(conn, season_id)
     synced: list[Day] = []
@@ -68,13 +70,6 @@ async def _sync(
         if refresh_day or entry_ids:
             await _sync_day(conn, fetch, season_id, day, entry_ids, refresh_day, stamp)
             synced.append(day)
-
-    upcoming = next((d for d in boot.days if not _started(d, now)), None)
-    if upcoming:  # so the schedule can show games before they start
-        fixtures_raw = await fetch(api.fixtures_path(upcoming.day_id))
-        with conn:
-            repo.save_raw(conn, season_id, api.fixtures_path(upcoming.day_id), fixtures_raw, stamp)
-            repo.upsert_fixtures(conn, season_id, api.parse_fixtures(fixtures_raw))
 
     mismatches = repo.reconcile_mismatches(
         conn, season_id, [d.day_id for d in synced if d.data_checked]
@@ -128,6 +123,24 @@ async def _sync_day(
             entry_day, picks = api.parse_picks(raw, entry_id, day.day_id)
             repo.upsert_entry_day(conn, season_id, entry_day)
             repo.replace_picks(conn, season_id, entry_id, day.day_id, picks)
+
+
+async def _sync_season_schedule(
+    conn: sqlite3.Connection, fetch: Fetch, season_id: str, now: datetime
+) -> None:
+    """Every game of the season, so the schedule works for any day or gameweek.
+
+    It is about 430KB, so it is refreshed only every SCHEDULE_REFRESH; scores for days in play
+    stay current through each day's own fixtures fetch.
+    """
+    path = api.season_fixtures_path()
+    fetched_at = repo.raw_fetched_at(conn, season_id, path)
+    if fetched_at and now - datetime.fromisoformat(fetched_at) < SCHEDULE_REFRESH:
+        return
+    raw = await fetch(path)
+    with conn:
+        repo.save_raw(conn, season_id, path, raw, now.isoformat())
+        repo.upsert_fixtures(conn, season_id, api.parse_fixtures(raw))
 
 
 def _started(day: Day, now: datetime) -> bool:

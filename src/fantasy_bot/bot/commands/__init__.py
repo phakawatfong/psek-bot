@@ -1,14 +1,23 @@
 import sqlite3
+from collections.abc import Mapping
 
 from discord import app_commands
 
-from fantasy_bot.bot.commands import money, participants, points, schedule, standings
+from fantasy_bot.bot.commands import chart, money, participants, points, schedule, standings
 
 PREFIX = "psek-nba"
 
 
-def register_all(tree: app_commands.CommandTree, conn: sqlite3.Connection, season_id: str) -> None:
-    """Every slash command the bot exposes. Users type /psek-nba-<name>."""
+def register_all(
+    tree: app_commands.CommandTree,
+    conn: sqlite3.Connection,
+    season_id: str,
+    team_icons: Mapping[str, str],
+) -> None:
+    """Every slash command the bot exposes. Users type /psek-nba-<name>.
+
+    `team_icons` is filled in once the logo emojis are loaded; until then games show codes only.
+    """
     routes = [
         # (name, description shown in Discord, handler)
         (
@@ -18,13 +27,18 @@ def register_all(tree: app_commands.CommandTree, conn: sqlite3.Connection, seaso
         ),
         ("points", "Each team's points on one day", points.handler(conn, season_id)),
         (
+            "chart",
+            "Picture of every team's season points growing day by day",
+            chart.handler(conn, season_id),
+        ),
+        (
             "schedule",
-            "NBA games for a day, with scores once played",
-            schedule.handler(conn, season_id),
+            "NBA games for a day or a whole gameweek, with scores once played",
+            schedule.handler(conn, season_id, team_icons),
         ),
         (
             "participants",
-            "Registered teams and their buy-ins",
+            "Registered teams",
             participants.handler(conn, season_id),
         ),
         (

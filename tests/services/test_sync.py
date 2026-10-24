@@ -1,7 +1,7 @@
 import asyncio
 import json
 import sqlite3
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -19,6 +19,7 @@ FIXTURES = Path(__file__).parents[1] / "fixtures" / "nbafantasy"
 # Real nbafantasy responses for day 4, trimmed to one entry's ten players.
 RESPONSES = {
     "bootstrap-static/": "bootstrap.json",
+    "fixtures/": "fixtures_4.json",  # the whole season; day 4 is all the trimmed data has
     "fixtures/?event=4": "fixtures_4.json",
     "event/4/live/": "live_4.json",
     "entry/34409/": "entry_34409.json",
@@ -97,7 +98,7 @@ def test_failed_fetch_records_error_and_writes_no_partial_day(conn: sqlite3.Conn
         sync(conn, FakeApi(fail_on="entry/34409/event/4/picks/"))
     counts = one(
         conn,
-        "SELECT (SELECT count(*) FROM fixture), (SELECT count(*) FROM fact_player_stat),"
+        "SELECT (SELECT count(*) FROM fact_player_stat), (SELECT count(*) FROM fact_entry_day),"
         " (SELECT error FROM sync_run)",
     )
     assert counts == (0, 0, "ConnectionError('nbafantasy is down')")
@@ -121,8 +122,17 @@ def test_upcoming_day_gets_its_schedule_but_no_points(conn: sqlite3.Connection) 
     track(conn, 34409)
     api = FakeApi()
     assert sync(conn, api, now=BEFORE_DAY_4).days_synced == []
-    assert api.calls == ["bootstrap-static/", "entry/34409/", "fixtures/?event=4"]
+    assert api.calls == ["bootstrap-static/", "entry/34409/", "fixtures/"]
     assert one(conn, "SELECT count(*), (SELECT count(*) FROM fact_entry_day) FROM fixture") == (
         12,
         0,
     )
+
+
+def test_season_schedule_is_refreshed_every_six_hours_only(conn: sqlite3.Connection) -> None:
+    track(conn, 34409)
+    sync(conn, FakeApi())
+    soon, later = FakeApi(), FakeApi()
+    sync(conn, soon, now=AFTER_DAY_4 + timedelta(hours=5))
+    sync(conn, later, now=AFTER_DAY_4 + timedelta(hours=6))
+    assert ("fixtures/" in soon.calls, "fixtures/" in later.calls) == (False, True)

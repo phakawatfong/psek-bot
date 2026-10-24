@@ -27,3 +27,18 @@ def games_for_day(conn: sqlite3.Connection, season_id: str, day_id: int) -> list
         Game(kickoff, home, away, hs, aws, bool(done))
         for kickoff, home, away, hs, aws, done in rows
     ]
+
+
+def days_in_gameweek(conn: sqlite3.Connection, season_id: str, gameweek: int) -> list[int]:
+    rows = conn.execute(
+        "SELECT day_id FROM day WHERE season_id = ? AND gameweek = ? ORDER BY day_id",
+        (season_id, gameweek),
+    )
+    return [day_id for (day_id,) in rows]
+
+
+def team_codes(conn: sqlite3.Connection, season_id: str) -> list[str]:
+    rows = conn.execute(
+        "SELECT short_name FROM nba_team WHERE season_id = ? ORDER BY short_name", (season_id,)
+    )
+    return [code for (code,) in rows]

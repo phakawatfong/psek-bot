@@ -3,7 +3,7 @@ import sqlite3
 import pytest
 
 from fantasy_bot.models import DaySchedule, Game
-from fantasy_bot.services.schedule import get_schedule
+from fantasy_bot.services.schedule import get_gameweek_schedule, get_schedule
 
 SEASON = "2026-27"
 
@@ -47,3 +47,10 @@ def test_day_without_synced_games_is_empty(with_games: sqlite3.Connection) -> No
 
 def test_unknown_day_has_no_schedule(with_games: sqlite3.Connection) -> None:
     assert get_schedule(with_games, SEASON, 99) is None
+
+
+def test_gameweek_schedule_lists_every_day_in_order(with_games: sqlite3.Connection) -> None:
+    week = get_gameweek_schedule(with_games, SEASON, 1)
+    assert week is not None
+    assert [(d.day_id, len(d.games)) for d in week.days] == [(1, 0), (2, 0), (3, 2)]
+    assert get_gameweek_schedule(with_games, SEASON, 9) is None

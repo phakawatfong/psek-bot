@@ -98,6 +98,15 @@ def tracked_entry_ids(conn: sqlite3.Connection, season_id: str) -> list[int]:
     return [entry_id for (entry_id,) in rows]
 
 
+def raw_fetched_at(conn: sqlite3.Connection, season_id: str, request_key: str) -> str | None:
+    row = conn.execute(
+        "SELECT fetched_at FROM raw_api_response"
+        " WHERE season_id = ? AND source = 'nbafantasy' AND request_key = ?",
+        (season_id, request_key),
+    ).fetchone()
+    return row[0] if row else None
+
+
 def final_day_ids(conn: sqlite3.Connection, season_id: str) -> set[int]:
     rows = conn.execute("SELECT day_id FROM day WHERE season_id = ? AND facts_final", (season_id,))
     return {day_id for (day_id,) in rows}

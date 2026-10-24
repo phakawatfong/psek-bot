@@ -55,9 +55,18 @@ every name starts with `psek-nba-`.
 |---|---|
 | `/psek-nba-standings [gameweek]` | Teams ranked by season points (or one gameweek), with the gap to the leader |
 | `/psek-nba-points [day]` | Each team's points on one day (default: latest) and season total, marked live or final |
-| `/psek-nba-schedule [day]` | NBA games for a day (default: next unfinished), in each reader's local time |
+| `/psek-nba-chart` | A picture of every team's season points growing day by day, with gameweek boundaries |
+| `/psek-nba-schedule [day] [gameweek]` | NBA games for a day (default: next unfinished) or a whole gameweek, with team logos, in each reader's local time |
 | `/psek-nba-participants` | Registered teams, entry ids, the gameweek each joined, and who is still pending |
 | `/psek-nba-money [gameweek]` | Season money over every final week plus the current week so far, or one week's pool |
+
+## Team logos
+
+On first start (or right after the first sync, once teams are known) the bot uploads the 30 NBA
+team logos as its own application emojis, named `nba_ATL`, `nba_BOS`, and so on. They belong to
+the bot, so they work in every server without any server permission, and later starts reuse
+them. You can see or delete them in the Developer Portal under your application's **Emojis**
+tab. Logos come from ESPN's public image CDN; if one can't be fetched, that team shows its code.
 
 ## Weekly pool
 

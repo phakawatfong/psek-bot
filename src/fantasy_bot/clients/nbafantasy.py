@@ -91,6 +91,10 @@ def fixtures_path(day_id: int) -> str:
     return f"fixtures/?event={day_id}"
 
 
+def season_fixtures_path() -> str:
+    return "fixtures/"
+
+
 def live_path(day_id: int) -> str:
     return f"event/{day_id}/live/"
 

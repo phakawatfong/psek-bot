@@ -13,8 +13,7 @@ def format_participants(rows: list[ParticipantRow]) -> str:
     if not rows:
         return "Nobody has registered yet."
     lines = [
-        f"- {display_name(r.name)}, entry {r.entry_id}, from gameweek {r.joined_gameweek}"
-        + (" (pending approval)" if r.status == "pending" else "")
+        f"- {display_name(r.name)}" + (" (pending approval)" if r.status == "pending" else "")
         for r in rows
     ]
     return "\n".join([f"**Participants ({len(rows)})**", *lines])

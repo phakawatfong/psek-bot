@@ -94,6 +94,20 @@ class DayPoints:
 
 
 @dataclass(frozen=True)
+class PointsSeries:
+    participant_id: ParticipantId
+    name: ParticipantName
+    days: list[int]
+    totals: list[int]  # season total after each day, in tenths
+
+
+@dataclass(frozen=True)
+class PointsHistory:
+    series: list[PointsSeries]  # in participant order, so colors follow the team
+    gameweek_of_day: dict[int, int]
+
+
+@dataclass(frozen=True)
 class Game:
     kickoff_time: str
     home: str
@@ -108,6 +122,12 @@ class DaySchedule:
     day_id: int
     day_name: str
     games: list[Game]
+
+
+@dataclass(frozen=True)
+class GameweekSchedule:
+    gameweek: int
+    days: list[DaySchedule]
 
 
 @dataclass(frozen=True)
