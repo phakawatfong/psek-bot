@@ -51,12 +51,26 @@ def seeded() -> sqlite3.Connection:
 def test_money_summary_ranks_by_latest_total_and_skips_pending() -> None:
     result = money_summary(SqliteRepository(seeded()), SEASON)
     # 102: 900, 101: 700, 103: 500, 104 never synced: 0. Pending 105 is excluded from the pool.
-    assert [(s.participant_id, s.rank, s.points, s.payout, s.net) for s in result] == [
-        (2, 1, 900, 2000, 1000),
-        (1, 2, 700, 1200, 200),
-        (3, 3, 500, 800, -200),
-        (4, 4, 0, 0, -1000),
+    assert [
+        (line.discord_user_id, s.rank, s.points, s.payout, s.net)
+        for line in result
+        for s in [line.settlement]
+    ] == [
+        (12, 1, 900, 2000, 1000),
+        (11, 2, 700, 1200, 200),
+        (13, 3, 500, 800, -200),
+        (14, 4, 0, 0, -1000),
     ]
+
+
+def test_ensure_season_creates_once_and_keeps_existing_split() -> None:
+    conn = connect(":memory:")
+    migrate(conn)
+    repo = SqliteRepository(conn)
+    repo.ensure_season("2027-28", 99, [6000, 4000])
+    repo.ensure_season("2027-28", 99, [5000, 3000, 2000])
+    assert repo.payout_split("2027-28") == [6000, 4000]
+    assert money_summary(repo, "2027-28") == []
 
 
 def test_gameweek_view_sums_days() -> None:
