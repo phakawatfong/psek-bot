@@ -1,0 +1,40 @@
+[project]
+name = "fantasy-bot"
+version = "0.1.0"
+description = "Discord bot that summarizes an NBA Fantasy league and settles the friends' pool"
+readme = "README.md"
+authors = [
+    { name = "phakawat (Kids) fongchai", email = "phakawat.fo@easysunday.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "discord-py>=2.4",
+    "nba-api>=1.12.0",
+]
+
+[project.scripts]
+fantasy-bot = "fantasy_bot:main"
+
+[build-system]
+requires = ["uv_build>=0.11.16,<0.12.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "mypy>=2.4.0",
+    "pytest>=9.1.1",
+    "ruff>=0.17.2",
+]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
+
+[tool.mypy]
+strict = true
+files = ["src", "tests"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
