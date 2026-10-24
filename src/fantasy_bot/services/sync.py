@@ -69,6 +69,13 @@ async def _sync(
             await _sync_day(conn, fetch, season_id, day, entry_ids, refresh_day, stamp)
             synced.append(day)
 
+    upcoming = next((d for d in boot.days if not _started(d, now)), None)
+    if upcoming:  # so the schedule can show games before they start
+        fixtures_raw = await fetch(api.fixtures_path(upcoming.day_id))
+        with conn:
+            repo.save_raw(conn, season_id, api.fixtures_path(upcoming.day_id), fixtures_raw, stamp)
+            repo.upsert_fixtures(conn, season_id, api.parse_fixtures(fixtures_raw))
+
     mismatches = repo.reconcile_mismatches(
         conn, season_id, [d.day_id for d in synced if d.data_checked]
     )

@@ -53,6 +53,10 @@ every name starts with `psek-nba-`.
 
 | Command | Shows |
 |---|---|
+| `/psek-nba-standings [gameweek]` | Teams ranked by season points (or one gameweek), with the gap to the leader |
+| `/psek-nba-points [day]` | Each team's points on one day (default: latest) and season total, marked live or final |
+| `/psek-nba-schedule [day]` | NBA games for a day (default: next unfinished), in each reader's local time |
+| `/psek-nba-participants` | Registered teams, entry ids, buy-ins, and who is still pending |
 | `/psek-nba-money` | The pool, each payout, and each person's net |
 
 ## Layout

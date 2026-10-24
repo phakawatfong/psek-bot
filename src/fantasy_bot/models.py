@@ -22,9 +22,63 @@ class Settlement:
 
 
 @dataclass(frozen=True)
+class ParticipantName:
+    team_name: str
+    manager_name: str
+
+
+@dataclass(frozen=True)
 class MoneyLine:
-    discord_user_id: int
+    name: ParticipantName
     settlement: Settlement
+
+
+@dataclass(frozen=True)
+class StandingRow:
+    rank: int
+    name: ParticipantName
+    points: int
+
+
+@dataclass(frozen=True)
+class DayPointsRow:
+    rank: int
+    name: ParticipantName
+    points: int  # that day
+    total_points: int  # season total after that day
+
+
+@dataclass(frozen=True)
+class DayPoints:
+    day_id: int
+    day_name: str
+    final: bool
+    rows: list[DayPointsRow]
+
+
+@dataclass(frozen=True)
+class Game:
+    kickoff_time: str
+    home: str
+    away: str
+    home_score: int | None
+    away_score: int | None
+    finished: bool
+
+
+@dataclass(frozen=True)
+class DaySchedule:
+    day_id: int
+    day_name: str
+    games: list[Game]
+
+
+@dataclass(frozen=True)
+class ParticipantRow:
+    name: ParticipantName
+    entry_id: int
+    buy_in: int
+    status: str
 
 
 # nbafantasy rows. Field names match the table columns in repositories/migrations.

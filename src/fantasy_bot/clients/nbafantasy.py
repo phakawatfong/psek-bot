@@ -9,7 +9,15 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 import aiohttp
+from pydantic import TypeAdapter
 
+from fantasy_bot.clients.nbafantasy_payloads import (
+    BootstrapPayload,
+    EntryPayload,
+    FixturePayload,
+    LivePayload,
+    PicksPayload,
+)
 from fantasy_bot.models import (
     Bootstrap,
     Day,
@@ -27,6 +35,7 @@ USER_AGENT = "psek-nba-bot/0.1 (private friends league)"
 ATTEMPTS = 3
 RETRY_STATUSES = {429, 500, 502, 503, 504}
 POSITIONS = {1: "BC", 2: "FC"}
+_FIXTURES = TypeAdapter(list[FixturePayload])
 
 
 class NotFound(Exception):
@@ -94,43 +103,43 @@ def picks_path(entry_id: int, day_id: int) -> str:
     return f"entry/{entry_id}/event/{day_id}/picks/"
 
 
-# Parsers: raw JSON in, rows out.
+# Parsers: raw JSON in, validated against nbafantasy_payloads, rows out.
 
 
 def parse_bootstrap(raw: Any) -> Bootstrap:
+    payload = BootstrapPayload.model_validate(raw)
     gameweeks = sorted(
-        (p for p in raw["phases"] if p["name"].startswith("Gameweek")),
-        key=lambda p: p["start_event"],
+        (p for p in payload.phases if p.name.startswith("Gameweek")), key=lambda p: p.start_event
     )
     gameweek_of = {
         day: number
         for number, phase in enumerate(gameweeks, start=1)
-        for day in range(phase["start_event"], phase["stop_event"] + 1)
+        for day in range(phase.start_event, phase.stop_event + 1)
     }
     return Bootstrap(
-        teams=[Team(t["id"], t["name"], t["short_name"]) for t in raw["teams"]],
+        teams=[Team(t.id, t.name, t.short_name) for t in payload.teams],
         players=[
             Player(
-                player_id=p["id"],
-                nba_person_id=p["code"],
-                web_name=p["web_name"],
-                first_name=p["first_name"],
-                second_name=p["second_name"],
-                team_id=p["team"],
-                position=POSITIONS[p["element_type"]],
+                player_id=p.id,
+                nba_person_id=p.code,
+                web_name=p.web_name,
+                first_name=p.first_name,
+                second_name=p.second_name,
+                team_id=p.team,
+                position=POSITIONS[p.element_type],
             )
-            for p in raw["elements"]
+            for p in payload.elements
         ],
         days=[
             Day(
-                day_id=e["id"],
-                gameweek=gameweek_of[e["id"]],
-                name=e["name"],
-                deadline_time=e["deadline_time"],
-                finished=e["finished"],
-                data_checked=e["data_checked"],
+                day_id=e.id,
+                gameweek=gameweek_of[e.id],
+                name=e.name,
+                deadline_time=e.deadline_time,
+                finished=e.finished,
+                data_checked=e.data_checked,
             )
-            for e in raw["events"]
+            for e in payload.events
         ],
     )
 
@@ -138,51 +147,53 @@ def parse_bootstrap(raw: Any) -> Bootstrap:
 def parse_fixtures(raw: Any) -> list[Fixture]:
     return [
         Fixture(
-            fixture_id=f["id"],
-            day_id=f["event"],
-            nba_game_id=f"{f['code']:010d}",
-            kickoff_time=f["kickoff_time"],
-            home_team_id=f["team_h"],
-            away_team_id=f["team_a"],
-            home_score=f["team_h_score"],
-            away_score=f["team_a_score"],
-            finished=f["finished"],
+            fixture_id=f.id,
+            day_id=f.event,
+            nba_game_id=f"{f.code:010d}",
+            kickoff_time=f.kickoff_time,
+            home_team_id=f.team_h,
+            away_team_id=f.team_a,
+            home_score=f.team_h_score,
+            away_score=f.team_a_score,
+            finished=f.finished,
         )
-        for f in raw
+        for f in _FIXTURES.validate_python(raw)
     ]
 
 
 def parse_live(raw: Any) -> list[PlayerStat]:
     return [
-        PlayerStat(game["fixture"], element["id"], s["identifier"], s["value"], s["points"])
-        for element in raw["elements"]
-        for game in element["explain"]
-        for s in game["stats"]
+        PlayerStat(game.fixture, element.id, s.identifier, s.value, s.points)
+        for element in LivePayload.model_validate(raw).elements
+        for game in element.explain
+        for s in game.stats
     ]
 
 
 def parse_entry(raw: Any) -> Entry:
+    payload = EntryPayload.model_validate(raw)
     return Entry(
-        entry_id=raw["id"],
-        entry_name=raw["name"],
-        manager_name=f"{raw['player_first_name']} {raw['player_last_name']}",
-        started_day=raw["started_event"],
+        entry_id=payload.id,
+        entry_name=payload.name,
+        manager_name=f"{payload.player_first_name} {payload.player_last_name}",
+        started_day=payload.started_event,
     )
 
 
 def parse_picks(raw: Any, entry_id: int, day_id: int) -> tuple[EntryDay, list[Pick]]:
-    history = raw["entry_history"]
+    payload = PicksPayload.model_validate(raw)
+    history = payload.entry_history
     entry_day = EntryDay(
         entry_id=entry_id,
         day_id=day_id,
-        points=history["points"],
-        total_points=history["total_points"],
-        transfers_cost=history["event_transfers_cost"],
-        points_on_bench=history["points_on_bench"],
-        overall_rank=history["overall_rank"],
+        points=history.points,
+        total_points=history.total_points,
+        transfers_cost=history.event_transfers_cost,
+        points_on_bench=history.points_on_bench,
+        overall_rank=history.overall_rank,
     )
     picks = [
-        Pick(entry_id, day_id, p["element"], p["position"], p["multiplier"], p["is_captain"])
-        for p in raw["picks"]
+        Pick(entry_id, day_id, p.element, p.position, p.multiplier, p.is_captain)
+        for p in payload.picks
     ]
     return entry_day, picks

@@ -115,3 +115,14 @@ def test_friend_registered_after_day_is_final_gets_backfilled(conn: sqlite3.Conn
     assert sync(conn, late) == SyncResult(days_synced=[4], entries=1, mismatches=[])
     assert late.calls == ["bootstrap-static/", "entry/34409/", "entry/34409/event/4/picks/"]
     assert one(conn, "SELECT official, computed FROM v_entry_day_reconcile") == (130, 130)
+
+
+def test_upcoming_day_gets_its_schedule_but_no_points(conn: sqlite3.Connection) -> None:
+    track(conn, 34409)
+    api = FakeApi()
+    assert sync(conn, api, now=BEFORE_DAY_4).days_synced == []
+    assert api.calls == ["bootstrap-static/", "entry/34409/", "fixtures/?event=4"]
+    assert one(conn, "SELECT count(*), (SELECT count(*) FROM fact_entry_day) FROM fixture") == (
+        12,
+        0,
+    )
