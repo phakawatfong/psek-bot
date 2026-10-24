@@ -16,8 +16,11 @@ def conn() -> sqlite3.Connection:
 
 @pytest.fixture
 def seeded(conn: sqlite3.Connection) -> sqlite3.Connection:
-    """Five entries over two days of gameweek 1; entry 104 has no data, 105 is pending."""
-    conn.execute("INSERT INTO season VALUES (?, 14, NULL)", (SEASON,))
+    """Five entries over two final days of gameweek 1; entry 104 has no data, 105 is pending.
+
+    The season uses the default weekly buy-in of 100.00 and a 50/30/20 split.
+    """
+    conn.execute("INSERT INTO season (season_id, league_id) VALUES (?, 14)", (SEASON,))
     conn.executemany(
         "INSERT INTO payout_rank VALUES (?, ?, ?)",
         [(SEASON, 1, 5000), (SEASON, 2, 3000), (SEASON, 3, 2000)],
@@ -33,16 +36,16 @@ def seeded(conn: sqlite3.Connection) -> sqlite3.Connection:
         " VALUES (?, ?, ?, 'manager')",
         [(SEASON, e, n) for e, n in entries],
     )
-    participants = [  # (discord user, entry, buy-in, status)
-        (11, 101, 1000, "approved"),
-        (12, 102, 1000, "approved"),
-        (13, 103, 1000, "approved"),
-        (14, 104, 1000, "approved"),
-        (15, 105, 1000, "pending"),
+    participants = [  # (discord user, entry, status)
+        (11, 101, "approved"),
+        (12, 102, "approved"),
+        (13, 103, "approved"),
+        (14, 104, "approved"),
+        (15, 105, "pending"),
     ]
     conn.executemany(
-        "INSERT INTO participant (season_id, discord_user_id, entry_id, buy_in_minor, status,"
-        " registered_at) VALUES (?, ?, ?, ?, ?, '2026-10-24T00:00:00Z')",
+        "INSERT INTO participant (season_id, discord_user_id, entry_id, status, registered_at)"
+        " VALUES (?, ?, ?, ?, '2026-10-24T00:00:00Z')",
         [(SEASON, *p) for p in participants],
     )
     day_totals = [  # (entry, day, day points, running total)

@@ -34,6 +34,43 @@ class MoneyLine:
 
 
 @dataclass(frozen=True)
+class PoolWeek:
+    gameweek: int
+    final: bool  # every day of the gameweek is data_checked
+    standings: list[Standing]
+
+
+@dataclass(frozen=True)
+class WeekMoney:
+    gameweek: int
+    final: bool
+    lines: list[MoneyLine]
+
+
+@dataclass(frozen=True)
+class SeasonTotal:
+    participant_id: ParticipantId
+    weeks: int
+    paid: int
+    won: int
+    net: int
+
+
+@dataclass(frozen=True)
+class SeasonMoneyRow:
+    name: ParticipantName
+    total: SeasonTotal
+
+
+@dataclass(frozen=True)
+class SeasonMoney:
+    weekly_buy_in: int
+    settled_weeks: list[int]
+    rows: list[SeasonMoneyRow]  # best net first
+    in_progress: WeekMoney | None  # the latest week, if not final yet
+
+
+@dataclass(frozen=True)
 class StandingRow:
     rank: int
     name: ParticipantName
@@ -77,7 +114,7 @@ class DaySchedule:
 class ParticipantRow:
     name: ParticipantName
     entry_id: int
-    buy_in: int
+    joined_gameweek: int
     status: str
 
 

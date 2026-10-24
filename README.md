@@ -56,8 +56,16 @@ every name starts with `psek-nba-`.
 | `/psek-nba-standings [gameweek]` | Teams ranked by season points (or one gameweek), with the gap to the leader |
 | `/psek-nba-points [day]` | Each team's points on one day (default: latest) and season total, marked live or final |
 | `/psek-nba-schedule [day]` | NBA games for a day (default: next unfinished), in each reader's local time |
-| `/psek-nba-participants` | Registered teams, entry ids, buy-ins, and who is still pending |
-| `/psek-nba-money` | The pool, each payout, and each person's net |
+| `/psek-nba-participants` | Registered teams, entry ids, the gameweek each joined, and who is still pending |
+| `/psek-nba-money [gameweek]` | Season money over every final week plus the current week so far, or one week's pool |
+
+## Weekly pool
+
+Everyone pays `WEEKLY_BUY_IN` (default 100) each gameweek from the week they joined. Each week's
+pool is split 50/30/20 by that week's points, net of transfer costs. Nothing is stored: every
+`/psek-nba-money` recomputes the weeks from the synced points. A week counts toward the season
+once nbafantasy marks all its days final. The buy-in and split are saved when the season is
+created and never change after that, because changing them would rewrite every past week.
 
 ## Layout
 

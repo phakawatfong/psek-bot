@@ -41,10 +41,10 @@ class FakeApi:
 
 
 def track(conn: sqlite3.Connection, *entry_ids: int) -> None:
-    ensure_season(conn, SEASON, 14, [5000, 3000, 2000])
+    ensure_season(conn, SEASON, 14, [5000, 3000, 2000], 10000)
     conn.executemany(
-        "INSERT INTO participant (season_id, discord_user_id, entry_id, buy_in_minor,"
-        " registered_at) VALUES (?, ?, ?, 1000, '2026-10-20T00:00:00Z')",
+        "INSERT INTO participant (season_id, discord_user_id, entry_id, registered_at)"
+        " VALUES (?, ?, ?, '2026-10-20T00:00:00Z')",
         [(SEASON, i, entry_id) for i, entry_id in enumerate(entry_ids)],
     )
 
@@ -107,8 +107,8 @@ def test_friend_registered_after_day_is_final_gets_backfilled(conn: sqlite3.Conn
     track(conn)
     sync(conn, FakeApi())  # day 4 becomes final with nobody tracked
     conn.execute(
-        "INSERT INTO participant (season_id, discord_user_id, entry_id, buy_in_minor,"
-        " registered_at) VALUES (?, 1, 34409, 1000, '2026-10-24T00:00:00Z')",
+        "INSERT INTO participant (season_id, discord_user_id, entry_id, registered_at)"
+        " VALUES (?, 1, 34409, '2026-10-24T00:00:00Z')",
         (SEASON,),
     )
     late = FakeApi()

@@ -5,7 +5,6 @@ from fantasy_bot.models import (
     ParticipantId,
     ParticipantName,
     ParticipantRow,
-    Standing,
     StandingRow,
 )
 
@@ -15,15 +14,6 @@ NAMES = "COALESCE(e.entry_name, 'entry ' || p.entry_id), COALESCE(e.manager_name
 PARTICIPANTS = (
     "participant p LEFT JOIN entry e ON e.season_id = p.season_id AND e.entry_id = p.entry_id"
 )
-
-
-def season_standings(conn: sqlite3.Connection, season_id: str) -> list[Standing]:
-    rows = conn.execute(
-        "SELECT participant_id, total_points, buy_in_minor"
-        " FROM v_season_standings WHERE season_id = ?",
-        (season_id,),
-    )
-    return [Standing(ParticipantId(pid), points, buy_in) for pid, points, buy_in in rows]
 
 
 def participant_names(
@@ -94,11 +84,11 @@ def day_info(conn: sqlite3.Connection, season_id: str, day_id: int) -> tuple[str
 
 def participant_list(conn: sqlite3.Connection, season_id: str) -> list[ParticipantRow]:
     rows = conn.execute(
-        f"SELECT {NAMES}, p.entry_id, p.buy_in_minor, p.status FROM {PARTICIPANTS}"
+        f"SELECT {NAMES}, p.entry_id, p.joined_gameweek, p.status FROM {PARTICIPANTS}"
         " WHERE p.season_id = ? ORDER BY p.status, 1",
         (season_id,),
     )
     return [
-        ParticipantRow(ParticipantName(t, m), entry_id, buy_in, status)
-        for t, m, entry_id, buy_in, status in rows
+        ParticipantRow(ParticipantName(t, m), entry_id, joined, status)
+        for t, m, entry_id, joined, status in rows
     ]

@@ -27,7 +27,13 @@ def main() -> None:
 
     conn = connect(settings.db_path)
     migrate(conn)
-    ensure_season(conn, settings.season_id, settings.league_id, settings.payout_split_bp)
+    ensure_season(
+        conn,
+        settings.season_id,
+        settings.league_id,
+        settings.payout_split_bp,
+        settings.weekly_buy_in_minor,
+    )
 
     if command == "sync":
         logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")

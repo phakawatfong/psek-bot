@@ -13,7 +13,7 @@ def user_version(conn: sqlite3.Connection) -> int:
 
 def test_fresh_database_reaches_latest_version() -> None:
     conn = connect(":memory:")
-    assert migrate(conn) == 2
+    assert migrate(conn) == 3
     tables = {r[0] for r in conn.execute("SELECT name FROM sqlite_schema WHERE type = 'table'")}
     assert {"season", "participant", "ledger", "fact_player_stat", "fact_pick"} <= tables
 
@@ -21,8 +21,8 @@ def test_fresh_database_reaches_latest_version() -> None:
 def test_rerunning_migrate_is_a_no_op() -> None:
     conn = connect(":memory:")
     migrate(conn)
-    assert migrate(conn) == 2
-    assert user_version(conn) == 2
+    assert migrate(conn) == 3
+    assert user_version(conn) == 3
 
 
 def test_failed_migration_rolls_back_and_keeps_old_version(tmp_path: Path) -> None:
@@ -38,14 +38,13 @@ def test_failed_migration_rolls_back_and_keeps_old_version(tmp_path: Path) -> No
 def test_schema_rejects_bad_money_and_unknown_status() -> None:
     conn = connect(":memory:")
     migrate(conn)
-    conn.execute("INSERT INTO season VALUES ('2026-27', 14, NULL)")
     with pytest.raises(sqlite3.IntegrityError):
         conn.execute(
-            "INSERT INTO participant (season_id, discord_user_id, entry_id, buy_in_minor,"
-            " registered_at) VALUES ('2026-27', 1, 7912, -5, '2026-10-24T00:00:00Z')"
+            "INSERT INTO season (season_id, league_id, weekly_buy_in_minor) VALUES ('x', 14, -5)"
         )
+    conn.execute("INSERT INTO season (season_id, league_id) VALUES ('2026-27', 14)")
     with pytest.raises(sqlite3.IntegrityError):
         conn.execute(
-            "INSERT INTO participant (season_id, discord_user_id, entry_id, buy_in_minor,"
-            " status, registered_at) VALUES ('2026-27', 1, 7912, 500, 'winner', '2026-10-24')"
+            "INSERT INTO participant (season_id, discord_user_id, entry_id, status,"
+            " registered_at) VALUES ('2026-27', 1, 7912, 'winner', '2026-10-24')"
         )

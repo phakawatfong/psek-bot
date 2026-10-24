@@ -56,11 +56,11 @@ def test_schedule_uses_discord_local_time_and_away_at_home() -> None:
 
 def test_participants_mark_pending_ones() -> None:
     rows = [
-        ParticipantRow(JK, 31818, 50000, "approved"),
-        ParticipantRow(ParticipantName("entry 40823", ""), 40823, 50000, "pending"),
+        ParticipantRow(JK, 31818, 1, "approved"),
+        ParticipantRow(ParticipantName("entry 40823", ""), 40823, 3, "pending"),
     ]
     assert format_participants(rows) == (
         "**Participants (2)**\n"
-        "- jkslots (pisit manoo), entry 31818, buy-in 500.00\n"
-        "- entry 40823, entry 40823, buy-in 500.00 (pending approval)"
+        "- jkslots (pisit manoo), entry 31818, from gameweek 1\n"
+        "- entry 40823, entry 40823, from gameweek 3 (pending approval)"
     )

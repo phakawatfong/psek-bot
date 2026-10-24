@@ -1,9 +1,9 @@
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from fractions import Fraction
 from itertools import groupby
 from math import floor
 
-from fantasy_bot.models import Settlement, Standing
+from fantasy_bot.models import ParticipantId, SeasonTotal, Settlement, Standing
 
 FULL_POOL_BP = 10_000
 
@@ -46,3 +46,14 @@ def settle(standings: Sequence[Standing], split_bp: Sequence[int]) -> list[Settl
         Settlement(s.participant_id, rank, s.points, s.buy_in, payout, payout - s.buy_in)
         for (s, rank, _), payout in zip(exact, payouts, strict=True)
     ]
+
+
+def season_totals(weeks: Iterable[Sequence[Settlement]]) -> list[SeasonTotal]:
+    """Add up each participant's weekly settlements. Best net first."""
+    totals: dict[ParticipantId, tuple[int, int, int]] = {}
+    for week in weeks:
+        for s in week:
+            played, paid, won = totals.get(s.participant_id, (0, 0, 0))
+            totals[s.participant_id] = (played + 1, paid + s.buy_in, won + s.payout)
+    rows = [SeasonTotal(pid, n, paid, won, won - paid) for pid, (n, paid, won) in totals.items()]
+    return sorted(rows, key=lambda t: (-t.net, t.participant_id))

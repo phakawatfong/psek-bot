@@ -1,6 +1,6 @@
 import pytest
 
-from fantasy_bot.calculations.payout import settle
+from fantasy_bot.calculations.payout import season_totals, settle
 from fantasy_bot.models import ParticipantId, Standing
 
 SPLIT = [5000, 3000, 2000]
@@ -77,3 +77,16 @@ def test_invalid_split_is_rejected(split: list[int]) -> None:
 def test_negative_buy_in_is_rejected() -> None:
     with pytest.raises(ValueError, match="negative"):
         settle(standings((1, 900, -1)), SPLIT)
+
+
+def test_season_totals_add_up_weeks_and_rank_by_net() -> None:
+    week_1 = settle(standings((1, 900, 100), (2, 700, 100), (3, 500, 100)), SPLIT)
+    week_2 = settle(standings((1, 100, 100), (2, 700, 100), (3, 500, 100), (4, 600, 100)), SPLIT)
+    assert [
+        (t.participant_id, t.weeks, t.paid, t.won, t.net) for t in season_totals([week_1, week_2])
+    ] == [
+        (2, 2, 200, 290, 90),
+        (4, 1, 100, 120, 20),
+        (1, 2, 200, 150, -50),
+        (3, 2, 200, 140, -60),
+    ]
