@@ -1,8 +1,12 @@
-"""Start here. Every run does the same three steps:
+"""Program entry point: pyproject.toml maps the `fantasy-bot` command to main().
 
-1. load the config from .env                       config/
-2. load what every job needs: database, season     dependencies.py
-3. run the job named on the command line           jobs.py
+After parsing the job name (default: bot), main() loads config, prepares the database,
+and calls the matching function in jobs.JOBS. Config reads the process environment;
+`uv run --env-file .env` supplies it for local runs.
+
+For the default job, continue in jobs.bot(), then discord_bot.FantasyBot. It registers
+controllers/routes.py and starts the sync timer; Discord then dispatches incoming commands
+to their controllers. The sync, backup, and export-participants jobs run once and exit.
 """
 
 import argparse
@@ -18,11 +22,11 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     job = parse_job()
     try:
-        config = load_config()  # 1.
+        config = load_config()
     except ConfigError as e:
         sys.exit(f"Config error: {e}")
-    dependencies = load_dependencies(config)  # 2.
-    JOBS[job](dependencies)  # 3.
+    dependencies = load_dependencies(config)
+    JOBS[job](dependencies)
 
 
 def parse_job() -> str:

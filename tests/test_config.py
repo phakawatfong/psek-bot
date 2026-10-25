@@ -17,7 +17,7 @@ def test_minimal_env_uses_defaults() -> None:
         LeagueConfig(
             league_id=14,
             season_id="2026-27",
-            weekly_buy_in_minor=10000,
+            weekly_buy_in_minor=5000,
             participants_file=Path("seed/participants.csv"),
             sync_interval_minutes=10,
         ),

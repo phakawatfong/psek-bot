@@ -6,8 +6,8 @@ from sqlalchemy import delete, func, insert, select, update
 from sqlalchemy.orm import Session
 
 from fantasy_bot.database import tables as t
-from fantasy_bot.database.queries import ENTRY_OF_PARTICIPANT, MANAGER_NAME, TEAM_NAME
 from fantasy_bot.models.participant import ParticipantId, ParticipantName
+from fantasy_bot.repositories.queries import ENTRY_OF_PARTICIPANT, MANAGER_NAME, TEAM_NAME
 
 
 def current(session: Session, season_id: str) -> dict[int, int]:

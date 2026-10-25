@@ -2,6 +2,8 @@
 
 Discord bot that summarizes an [NBA Fantasy](https://nbafantasy.nba.com) league and settles the friends' betting pool.
 
+Reading the code? Start with [Program flow](#program-flow), then use [Layout](#layout) to find files.
+
 ## Run it locally
 
 1. Create the Discord bot (once).
@@ -128,7 +130,7 @@ format. Docker mounts the whole `seed/` folder read-only, so any editor's save i
 
 ## Weekly pool
 
-`WEEKLY_BUY_IN` in `.env` (default `100`) is what each person pays into each gameweek's pool, from
+`WEEKLY_BUY_IN` in `.env` (default `50`) is what each person pays into each gameweek's pool, from
 the week they joined. Each week's pool is split by that week's points, net of transfer costs:
 
 | Place | Share of the pool |
@@ -153,11 +155,63 @@ marks all its days final. The buy-in is saved when the season is created and nev
 that, because changing it would rewrite every past week. If `.env` later says something
 different, the bot logs a warning naming both values and keeps the season's.
 
+## Program flow
+
+**Start at `src/fantasy_bot/main.py: main()`.** `pyproject.toml` connects the terminal command
+`fantasy-bot` to this function. Paths below are relative to `src/fantasy_bot/`.
+
+**Startup** (`uv run --env-file .env fantasy-bot`):
+
+```mermaid
+flowchart TD
+    Start["fantasy-bot"] --> Main["main.py: main()<br/>Choose job; default is bot"]
+    Main --> Config["config/: load_config()<br/>Read and validate environment"]
+    Config --> Database["dependencies.py: load_dependencies()<br/>Prepare database, sessions and season"]
+    Database --> Jobs{"jobs.py: JOBS"}
+    Jobs -->|bot| Bot["discord_bot.py: FantasyBot<br/>Register commands and start sync timer"]
+    Bot --> Running["Keep running: handle commands and sync periodically"]
+    Jobs -->|sync, backup, export-participants| Once["Run selected job once, then exit"]
+```
+
+Locally, `uv --env-file .env` loads the environment before the program starts. Database setup
+applies migrations and ensures the season exists. `controllers/routes.py` lists the slash
+commands. The timer and the standalone `sync` job both call `services/sync.py: sync_now()`.
+
+**One command** (`/psek-nba-pool`):
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant Controller as controllers/pool.py
+    participant Service as services/pool.py
+    participant Repository as repositories/points.py + participants.py
+    participant DB as SQLite
+    User->>Controller: /psek-nba-pool [gameweek]
+    Controller->>Service: get_pool() with a short database session
+    Service->>Repository: Read points and participant names
+    Repository->>DB: Query stored data
+    DB-->>Repository: Rows
+    Repository-->>Service: Points and names
+    Note over Service: Calculate payouts with services/prizes.py
+    Service-->>Controller: Pool result (or no data)
+    Note over Controller: Format reply and close session
+    Controller-->>User: Send Discord reply
+```
+
+Commands read stored data; sync fetches updates from nbafantasy. At startup, each controller's
+`handler()` builds the callback; its inner `handle()` runs when someone uses the command.
+
+| To change | Start in |
+|---|---|
+| A command's reply | `controllers/` |
+| A calculation or sync rule | `services/` |
+| What data is read or written | `repositories/` |
+
 ## Layout
 
-Folders by layer. To follow how a command works, read in this order: `main.py`, then
-`controllers/routes.py` (every command), then that command's controller, its service, and the
-repositories it uses.
+`src/` holds application code; `fantasy_bot/` is its Python package, giving imports a clear
+name such as `fantasy_bot.services.pool`. Tests, docs and deployment files live outside it.
+Within the package, folders group code by responsibility:
 
 ```
 src/fantasy_bot/
@@ -172,13 +226,15 @@ src/fantasy_bot/
   services/         one job each: standings, money, pool, chart, participants, sync;
                     prizes.py is the 50/30/15/5 split, chart_drawing.py the PNGs
   repositories/     SQL, one file per kind of data: points, participants, season, nbafantasy
+                    queries.py holds shared SQL expressions for participant names
   clients/          HTTP calls to nbafantasy
   database/         SQLAlchemy engine and sessions, table mappings, migrations
 ```
 
 Each folder imports only the ones below it: controllers → services → repositories → database,
-services → clients → contracts, and everything may use models. Only controllers import
-`discord`, and only `services/chart_drawing.py` imports matplotlib. `tests/test_layering.py`
+services → clients → contracts, and everything may use models. Only controllers and
+`discord_bot.py` import `discord`, and only `services/chart_drawing.py` imports matplotlib.
+`tests/test_layering.py`
 fails the build if any of this drifts. `tests/` mirrors `src/`.
 
 All database access goes through SQLAlchemy: queries are `select()`/`insert()` statements on the

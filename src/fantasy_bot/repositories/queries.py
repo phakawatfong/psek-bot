@@ -1,4 +1,4 @@
-"""Query pieces every feature shares: naming a participant by its nbafantasy team."""
+"""SQL expressions repositories share: naming a participant by its nbafantasy team."""
 
 from sqlalchemy import Text, and_, cast, func, literal
 

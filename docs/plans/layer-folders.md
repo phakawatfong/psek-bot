@@ -1,6 +1,8 @@
 # Plan: folders by layer, and a main.py that reads top to bottom
 
-Status: done, together with simplify.md step 5. Replaces section 3 ("Code organised by
+Status: done, together with simplify.md step 5. Shared SQL expressions now live in
+repositories/queries.py. README's Program flow diagrams and main.py document startup and command handling
+separately; the existing layout is retained after discussing MVC. Replaces section 3 ("Code organised by
 feature") of simplify.md; the rest of that plan stands.
 
 ## Why
@@ -43,12 +45,12 @@ src/fantasy_bot/
     participants.py    who is in the pool, and their names
     season.py          the season row and its weekly buy-in
     nbafantasy.py      the sync's writes
+    queries.py         SQL expressions repositories share (naming a participant)
   clients/
     nbafantasy.py      HTTP calls to nbafantasy, parsing payloads into models
   database/
     connection.py      engine, sessions, migrations, backups
     tables.py          SQLAlchemy mappings of the tables and views
-    queries.py         query pieces repositories share (naming a participant)
     migrations/        the schema, as SQL files
 ```
 
@@ -57,9 +59,9 @@ src/fantasy_bot/
 ```python
 def main():
     job = parse_job()
-    config = load_config()                     # 1. .env -> typed configs
-    dependencies = load_dependencies(config)   # 2. database, sessions, season row
-    JOBS[job](dependencies)                    # 3. bot | sync | backup | export-participants
+    config = load_config()  # 1. .env -> typed configs
+    dependencies = load_dependencies(config)  # 2. database, sessions, season row
+    JOBS[job](dependencies)  # 3. bot | sync | backup | export-participants
 ```
 
 `load_dependencies()` is a plain function returning a small dataclass. No dependency-injection framework.

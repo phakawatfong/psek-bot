@@ -6,11 +6,11 @@ from sqlalchemy import and_, func, select
 from sqlalchemy.orm import Session
 
 from fantasy_bot.database import tables as t
-from fantasy_bot.database.queries import ENTRY_OF_PARTICIPANT, MANAGER_NAME, TEAM_NAME
 from fantasy_bot.models.chart import PointsSeries
 from fantasy_bot.models.money import PoolWeek, Standing
 from fantasy_bot.models.participant import ParticipantId, ParticipantName
 from fantasy_bot.models.standings import StandingRow
+from fantasy_bot.repositories.queries import ENTRY_OF_PARTICIPANT, MANAGER_NAME, TEAM_NAME
 
 
 def season_table(session: Session, season_id: str) -> list[StandingRow]:

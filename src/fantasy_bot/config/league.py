@@ -13,7 +13,7 @@ class LeagueConfig:
     season_id: str  # e.g. "2026-27"; a new id starts a new season with its own buy-in
     # Each person, each gameweek, in cents. Used only when the season is first created; after
     # that the season's stored buy-in wins.
-    weekly_buy_in_minor: int = 10000
+    weekly_buy_in_minor: int = 5000
     participants_file: Path = DEFAULT_PARTICIPANTS_FILE
     sync_interval_minutes: int = 10
 
@@ -28,7 +28,7 @@ class LeagueConfig:
 
 
 def _buy_in(value: str | None) -> int:
-    """WEEKLY_BUY_IN in money, e.g. "100" or "50.50", as minor units."""
+    """WEEKLY_BUY_IN in money, e.g. "50" or "50.50", as minor units."""
     if not value:
         return LeagueConfig.weekly_buy_in_minor
     minor = hundredths(value, "WEEKLY_BUY_IN")

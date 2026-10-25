@@ -28,7 +28,7 @@ def seeded(session: Session) -> Session:
     """Five league entries over two final days of gameweek 1. Four are participants: 104 has
     no data yet, and 105 (Echo) is in the league but not in the pool.
 
-    The season uses the default weekly buy-in of 100.00. Rows are flushed
+    The season uses an explicit weekly buy-in of 100.00. Rows are flushed
     in foreign-key order: the mappings have no relationship()s, so SQLAlchemy doesn't order
     inserts across tables by itself.
     """
