@@ -103,6 +103,9 @@ every name starts with `psek-nba-`.
 | `/psek-nba-add team [member] [from_gameweek]` | Admin: put a friend's team straight into the pool, linked to their Discord account if given |
 | `/psek-nba-approve team [from_gameweek]` | Admin: let a registered team into the pool, optionally from an earlier gameweek |
 | `/psek-nba-paid team amount [direction] [note]` | Admin: record real money paid into (`in`) or out of (`out`) the pot |
+| `/psek-nba-edit team [from_gameweek] [member]` | Admin: change a registered team's start week or linked Discord account |
+| `/psek-nba-remove team` | Admin: take a team out of the pool with its payment records; the reply says how to undo it |
+| `/psek-nba-reset` | Admin: remove every team and payment record this season, after a confirm button |
 
 ## Team logos
 
@@ -129,6 +132,21 @@ tab. Logos come from ESPN's public image CDN; if one can't be fetched, that team
 Record real money with `/psek-nba-paid` as it moves. `/psek-nba-money` then shows, for each
 person, whether they owe the pot, are owed by it, or are settled: their season net, plus what
 they paid in, minus what they were paid out.
+
+## Fixing mistakes
+
+| Mistake | Fix |
+|---|---|
+| Wrong start week | `/psek-nba-edit team:… from_gameweek:N` |
+| Team linked to the wrong person | `/psek-nba-edit team:… member:@right-person` |
+| Team added by mistake | `/psek-nba-remove team:…`; its reply gives the exact command to undo it |
+| Everything is a mess | `/psek-nba-reset`, then add everyone again; it asks for confirmation first |
+
+These only change registrations and payment records: points synced from nbafantasy, the prize
+rules, and other seasons are never touched. Because money is recomputed from points on every
+call, moving a start week or removing a team changes the pools of the weeks it covered, including
+finished ones; the replies name those weeks. The nightly backups in `/data/backups` are the last
+resort.
 
 ## Who is an admin
 

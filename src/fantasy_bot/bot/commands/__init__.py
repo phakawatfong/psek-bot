@@ -6,6 +6,7 @@ from discord import app_commands
 from fantasy_bot.bot.commands import (
     admin,
     chart,
+    fixes,
     money,
     participants,
     points,
@@ -73,6 +74,22 @@ def register_all(
             "paid",
             "Record real money paid into or out of the pot",
             admin.paid_handler(conn, season_id),
+        ),
+        # Admin only, for fixing mistakes.
+        (
+            "edit",
+            "Change a team's start week or linked Discord account",
+            fixes.edit_handler(conn, season_id),
+        ),
+        (
+            "remove",
+            "Take a team out of the pool, with its payment records",
+            fixes.remove_handler(conn, season_id),
+        ),
+        (
+            "reset",
+            "Remove every team and payment record this season (asks first)",
+            fixes.reset_handler(conn, season_id),
         ),
     ]
     for name, description, callback in routes:

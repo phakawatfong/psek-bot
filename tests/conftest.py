@@ -59,3 +59,18 @@ def seeded(conn: sqlite3.Connection) -> sqlite3.Connection:
         [(SEASON, *d) for d in day_totals],
     )
     return conn
+
+
+@pytest.fixture
+def league(seeded: sqlite3.Connection) -> sqlite3.Connection:
+    """The seeded league plus Foxtrot (106), a league team nobody has registered.
+
+    Seeded participants 101-105 were entered by hand with placeholder ids 11-15.
+    """
+    seeded.execute(
+        "INSERT INTO entry (season_id, entry_id, entry_name, manager_name)"
+        " VALUES (?, 106, 'Foxtrot', 'fox manager')",
+        (SEASON,),
+    )
+    seeded.commit()
+    return seeded

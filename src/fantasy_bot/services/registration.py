@@ -139,3 +139,83 @@ def find_teams(
 ) -> list[LeagueTeam]:
     """Teams matching typed text, for the command dropdowns."""
     return repo.search_teams(conn, season_id, text, status)
+
+
+# Fixing mistakes: see docs/plans/fixing-mistakes.md. None of these touch points or rules.
+
+EditOutcome = Literal["updated", "nothing_to_change", "member_has_other_team", "not_registered"]
+
+
+@dataclass(frozen=True)
+class EditResult:
+    outcome: EditOutcome
+    team: LeagueTeam | None = None  # for member_has_other_team: the member's own team
+    old_gameweek: int | None = None
+    new_gameweek: int | None = None  # set only when the start week changed
+    new_member_id: int | None = None  # set only when the linked account changed
+
+
+@dataclass(frozen=True)
+class RemoveResult:
+    done: bool  # False: the team hasn't registered
+    team: LeagueTeam | None = None
+    joined_gameweek: int | None = None
+    discord_user_id: int | None = None
+    payments: int = 0
+    paid_in: int = 0
+    paid_out: int = 0
+
+
+@dataclass(frozen=True)
+class ResetResult:
+    teams: int
+    payments: int
+
+
+def edit(
+    conn: sqlite3.Connection,
+    season_id: str,
+    entry_id: int,
+    from_gameweek: int | None,
+    member_id: int | None,
+) -> EditResult:
+    """Change a registered team's start week and/or linked account; its status is kept."""
+    found = repo.by_entry(conn, season_id, entry_id)
+    if found is None:
+        return EditResult("not_registered")
+    team = repo.league_team(conn, season_id, entry_id)
+    new_gameweek = from_gameweek if from_gameweek not in (None, found.joined_gameweek) else None
+    new_member = member_id if member_id not in (None, found.discord_user_id) else None
+    if new_member is not None and (theirs := repo.by_user(conn, season_id, new_member)):
+        return EditResult(
+            "member_has_other_team", repo.league_team(conn, season_id, theirs.entry_id)
+        )
+    if new_gameweek is None and new_member is None:
+        return EditResult("nothing_to_change", team)
+    if new_gameweek is not None:
+        repo.set_start(conn, found.participant_id, new_gameweek)
+    if new_member is not None:
+        repo.link_user(conn, found.participant_id, new_member)
+    return EditResult("updated", team, found.joined_gameweek, new_gameweek, new_member)
+
+
+def remove(conn: sqlite3.Connection, season_id: str, entry_id: int) -> RemoveResult:
+    """Take a team out of the pool with its payment records; the result says how to undo it."""
+    found = repo.by_entry(conn, season_id, entry_id)
+    if found is None:
+        return RemoveResult(False)
+    team = repo.league_team(conn, season_id, entry_id)
+    payments, paid_in, paid_out = repo.remove(conn, found.participant_id)
+    return RemoveResult(
+        True, team, found.joined_gameweek, found.discord_user_id, payments, paid_in, paid_out
+    )
+
+
+def reset_preview(conn: sqlite3.Connection, season_id: str) -> ResetResult:
+    """What a reset would remove, to show before asking for confirmation."""
+    return ResetResult(*repo.count(conn, season_id))
+
+
+def reset(conn: sqlite3.Connection, season_id: str) -> ResetResult:
+    """Remove every registration and payment record of the season."""
+    return ResetResult(*repo.reset(conn, season_id))

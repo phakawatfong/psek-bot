@@ -89,6 +89,7 @@ class Registration:
     discord_user_id: int
     entry_id: int
     status: str  # 'pending' or 'approved'
+    joined_gameweek: int
 
 
 @dataclass(frozen=True)

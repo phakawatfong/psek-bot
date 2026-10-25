@@ -19,21 +19,6 @@ NOW = datetime(2026, 10, 25, tzinfo=UTC)
 ALICE, BOB = 312345678901234567, 412345678901234567  # real Discord ids are 17-20 digits
 
 
-@pytest.fixture
-def league(seeded: sqlite3.Connection) -> sqlite3.Connection:
-    """The seeded league plus Foxtrot (106), a league team nobody has registered.
-
-    Seeded participants 101-105 were entered by hand with placeholder ids 11-15.
-    """
-    seeded.execute(
-        "INSERT INTO entry (season_id, entry_id, entry_name, manager_name)"
-        " VALUES (?, 106, 'Foxtrot', 'fox manager')",
-        (SEASON,),
-    )
-    seeded.commit()
-    return seeded
-
-
 def test_new_team_registers_as_pending_from_next_gameweek(league: sqlite3.Connection) -> None:
     result = register(league, SEASON, ALICE, 106, NOW)
     # Gameweek 1 (days 1-2) is under way on NOW, so Alice starts in gameweek 2.

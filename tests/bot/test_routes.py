@@ -21,6 +21,9 @@ def test_every_command_is_prefixed_with_bot_name(conn: sqlite3.Connection) -> No
         "psek-nba-add",
         "psek-nba-approve",
         "psek-nba-paid",
+        "psek-nba-edit",
+        "psek-nba-remove",
+        "psek-nba-reset",
     ]
 
 
@@ -32,4 +35,11 @@ def test_only_server_managers_see_admin_commands(conn: sqlite3.Connection) -> No
         for c in tree.get_commands()
         if c.default_permissions and c.default_permissions.manage_guild
     }
-    assert hidden == {"psek-nba-add", "psek-nba-approve", "psek-nba-paid"}
+    assert hidden == {
+        "psek-nba-add",
+        "psek-nba-approve",
+        "psek-nba-paid",
+        "psek-nba-edit",
+        "psek-nba-remove",
+        "psek-nba-reset",
+    }

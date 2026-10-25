@@ -16,17 +16,21 @@ def search_teams(
 ) -> list[LeagueTeam]:
     """League teams whose team or manager name contains `text`.
 
-    status None searches every team in the league; 'pending' or 'approved' only teams registered
-    with that status; 'unregistered' only teams nobody has registered.
+    status None searches every team in the league; 'registered' teams registered with any status;
+    'pending' or 'approved' only teams registered with that status; 'unregistered' only teams
+    nobody has registered.
     """
     like = f"%{text.strip()}%"
     registered = "SELECT entry_id FROM participant WHERE season_id = e.season_id"
+    args: list[str] = []
     if status == "unregistered":
-        where, args = f" AND e.entry_id NOT IN ({registered})", []
+        where = f" AND e.entry_id NOT IN ({registered})"
+    elif status == "registered":
+        where = f" AND e.entry_id IN ({registered})"
     elif status:
         where, args = f" AND e.entry_id IN ({registered} AND status = ?)", [status]
     else:
-        where, args = "", []
+        where = ""
     rows = conn.execute(
         "SELECT e.entry_id, e.entry_name, e.manager_name FROM entry e"
         " WHERE e.season_id = ? AND (e.entry_name LIKE ? OR e.manager_name LIKE ?)"
@@ -88,6 +92,40 @@ def approve(conn: sqlite3.Connection, participant_id: int, joined_gameweek: int 
         )
 
 
+def set_start(conn: sqlite3.Connection, participant_id: int, joined_gameweek: int) -> None:
+    with conn:
+        conn.execute(
+            "UPDATE participant SET joined_gameweek = ? WHERE participant_id = ?",
+            (joined_gameweek, participant_id),
+        )
+
+
+def remove(conn: sqlite3.Connection, participant_id: int) -> tuple[int, int, int]:
+    """Delete a registration and its payments together. Returns (payments, paid in, paid out)."""
+    payments = _payment_summary(conn, "participant_id = ?", (participant_id,))
+    with conn:
+        conn.execute("DELETE FROM ledger WHERE participant_id = ?", (participant_id,))
+        conn.execute("DELETE FROM participant WHERE participant_id = ?", (participant_id,))
+    return payments
+
+
+def count(conn: sqlite3.Connection, season_id: str) -> tuple[int, int]:
+    """(registrations, payment records) in the season."""
+    teams: int = conn.execute(
+        "SELECT count(*) FROM participant WHERE season_id = ?", (season_id,)
+    ).fetchone()[0]
+    return teams, _payment_summary(conn, _IN_SEASON, (season_id,))[0]
+
+
+def reset(conn: sqlite3.Connection, season_id: str) -> tuple[int, int]:
+    """Delete every registration and payment in the season. Returns how many of each."""
+    removed = count(conn, season_id)
+    with conn:
+        conn.execute(f"DELETE FROM ledger WHERE {_IN_SEASON}", (season_id,))
+        conn.execute("DELETE FROM participant WHERE season_id = ?", (season_id,))
+    return removed
+
+
 def add_payment(
     conn: sqlite3.Connection,
     participant_id: int,
@@ -119,10 +157,27 @@ def payment_totals(
     return {ParticipantId(pid): (paid_in, paid_out) for pid, paid_in, paid_out in rows}
 
 
+_IN_SEASON = "participant_id IN (SELECT participant_id FROM participant WHERE season_id = ?)"
+
+
+def _payment_summary(
+    conn: sqlite3.Connection, where: str, args: tuple[object, ...]
+) -> tuple[int, int, int]:
+    """(payment records, paid in, paid out) for the ledger rows matching `where`."""
+    row = conn.execute(
+        "SELECT count(*),"
+        " COALESCE(SUM(CASE WHEN kind = 'paid_in' THEN amount_minor END), 0),"
+        " COALESCE(SUM(CASE WHEN kind = 'paid_out' THEN amount_minor END), 0)"
+        f" FROM ledger WHERE {where}",
+        args,
+    ).fetchone()
+    return row[0], row[1], row[2]
+
+
 def _one(conn: sqlite3.Connection, column: str, season_id: str, value: int) -> Registration | None:
     row = conn.execute(
-        "SELECT participant_id, discord_user_id, entry_id, status FROM participant"
-        f" WHERE season_id = ? AND {column} = ?",
+        "SELECT participant_id, discord_user_id, entry_id, status, joined_gameweek"
+        f" FROM participant WHERE season_id = ? AND {column} = ?",
         (season_id, value),
     ).fetchone()
-    return Registration(ParticipantId(row[0]), row[1], row[2], row[3]) if row else None
+    return Registration(ParticipantId(row[0]), *row[1:]) if row else None
