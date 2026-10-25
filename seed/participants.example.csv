@@ -3,7 +3,7 @@
 # `docker compose run --rm bot sync` to apply it now):
 #   add a row to add someone, change from_gameweek to move their start,
 #   delete a row to remove them.
-# entry_id: the number in the team's nbafantasy URL, e.g. nbafantasy.nba.com/entry/31818
+# entry_id: the number in the team's nbafantasy URL, e.g. nbafantasy.nba.com/entry/12345
 # from_gameweek: the first gameweek they pay into and play for
 # name: optional, only to make this file readable
 entry_id,from_gameweek,name

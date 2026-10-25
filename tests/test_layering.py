@@ -1,7 +1,8 @@
 """The folder layout as rules the build checks, so it can't quietly drift.
 
-1. Each folder imports only the folders below it (ALLOWED); main.py and discord_bot.py wire
-   everything together, so they may import anything.
+1. Each folder imports only the folders below it (ALLOWED). The files at the top (main.py,
+   dependencies.py, jobs.py, discord_bot.py) wire everything together, so they may import
+   anything.
 2. Only controllers/ and discord_bot.py import discord.
 3. Only services/chart_drawing.py imports matplotlib.
 """

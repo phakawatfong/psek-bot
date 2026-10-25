@@ -161,7 +161,9 @@ repositories it uses.
 
 ```
 src/fantasy_bot/
-  main.py           1. load the config  2. build the database and season  3. run the job
+  main.py           start here: 1. load the config  2. load dependencies  3. run the job
+  dependencies.py   step 2: the migrated database, sessions, and the season row
+  jobs.py           step 3: bot, sync, backup, export-participants
   discord_bot.py    the Discord client: registers the routes, runs the sync loop
   config/           .env, one small typed config each for discord, database, league
   contracts/        nbafantasy's JSON payloads, as pydantic models (what we receive)

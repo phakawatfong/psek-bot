@@ -17,7 +17,9 @@ With four commands and about 2,300 lines, folders by layer give one reading orde
 
 ```
 src/fantasy_bot/
-  main.py              1. load config  2. build dependencies  3. run the job
+  main.py              1. load config  2. load dependencies  3. run the job
+  dependencies.py      step 2: database, sessions, season row
+  jobs.py              step 3: bot | sync | backup | export-participants
   discord_bot.py       the Discord client: registers the routes, runs the sync loop
   config/              .env, read once at start-up, one small typed config per concern
     discord.py         token, guild id
@@ -54,14 +56,13 @@ src/fantasy_bot/
 
 ```python
 def main():
-    command = parse_args()
-    config = load_config()        # 1. .env -> typed configs
-    app = build(config)           # 2. database, sessions, season row
-    job, _ = JOBS[command]        # 3. bot | sync | backup | export-participants
-    job(app)
+    job = parse_job()
+    config = load_config()                     # 1. .env -> typed configs
+    dependencies = load_dependencies(config)   # 2. database, sessions, season row
+    JOBS[job](dependencies)                    # 3. bot | sync | backup | export-participants
 ```
 
-`build()` is a plain function returning a small dataclass. No dependency-injection framework.
+`load_dependencies()` is a plain function returning a small dataclass. No dependency-injection framework.
 
 ## Rules, enforced by tests/test_layering.py
 
@@ -90,5 +91,5 @@ Each folder may import only the folders below it:
 
 1. Move files and rewrite imports; behaviour unchanged, tests green.
 2. Merge the per-command repositories into `repositories/points.py` and `participants.py`.
-3. Split config, and rewrite `main.py` as config → build → run.
+3. Split config, and rewrite `main.py` as config → dependencies → job.
 4. Then simplify.md step 5 (`/psek-nba-pool`, money by gameweek, `chart by:gameweek`).
