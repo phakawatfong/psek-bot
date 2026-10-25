@@ -45,6 +45,20 @@ def test_team_markdown_is_escaped() -> None:
     assert r"\*\*ALP\*\*" in reply
 
 
+def test_logo_markup_is_preserved_and_missing_logo_uses_team_code() -> None:
+    [reply] = schedule.format_schedule([replace(DAY, games=[GAME])], {"ALP": "<:nba_ALP:123>"})
+    assert "<:nba_ALP:123> ALP @ BRV" in reply
+
+
+def test_whole_week_with_emojis_keeps_all_games_and_stays_within_limit() -> None:
+    icons = {code: f"<:nba_{code}:123456789012345678>" for code in ("ALP", "BRV")}
+    days = [replace(DAY, day=n, games=[GAME] * 15) for n in range(1, 8)]
+    replies = schedule.format_schedule(days, icons)
+    assert all(len(reply) <= 2000 for reply in replies)
+    for icon in icons.values():
+        assert sum(reply.count(icon) for reply in replies) == 105
+
+
 @pytest.mark.parametrize("failed", [False, True])
 def test_handler_defers_before_fetch_and_sends_followup(
     engine: Engine, monkeypatch: pytest.MonkeyPatch, failed: bool

@@ -12,9 +12,12 @@ something on it, and delete items that are done.
   Both options select that day; day alone uses the current gameweek; no options uses the current
   fantasy day; gameweek alone shows the whole week. Fantasy deadlines define day boundaries.
   Schedules fetch on demand, show Bangkok times and completed scores, and do not use the database.
-- The current commit is `df76215` (`feat: simplify main`). The shared-query cleanup and
-  documentation updates are uncommitted for the owner's review; AGENTS.md and this handoff
-  are also untracked. The owner stages and commits changes.
+- The current commit is `ddb5604` (`feat: add schedule`). Team-emoji implementation and
+  documentation updates are uncommitted for the owner's review. The owner stages and commits.
+- `docs/plans/team-emojis.md` is done: schedule replies include NBA team logo emojis, reused
+  from the bot application or uploaded once if missing. Setup runs at startup with a 60-second
+  limit. Missing logos fall back to team codes and retry on the next restart; no additional
+  scheduled job or database storage. All 30 public logo downloads were verified.
 - Shared SQL expressions moved from `database/queries.py` to `repositories/queries.py`, next
   to their only callers. Behaviour is unchanged.
 - After discussing MVC, the owner chose to keep the current structure and focus on reading
@@ -24,10 +27,11 @@ something on it, and delete items that are done.
 - The default weekly buy-in is now 50.00 (5000 minor units), also reflected in `.env.example`.
   Explicit environment settings and existing seasons keep their own buy-in. Historical
   migrations are unchanged; new seasons receive the configured amount explicitly.
-- Checks rerun after adding schedule: 111 tests, ruff format,
+- Checks rerun after restoring team emojis: 133 tests, ruff format,
   ruff check, and mypy pass.
   A read-only API check returned GW2's seven days and 49 games. The new command has not been
-  published to Discord; restarting the updated bot registers it through the usual startup.
+  published to Discord by this agent; restarting the updated bot registers it through the usual
+  startup and uploads missing application emojis. Ask the owner before starting the live bot.
   No live bot or database sync was run during this cleanup. The previously reported sync on a
   copy of the real database applied the real
   participants file and synced all four teams. No gameweek is final yet, so `/psek-nba-money` shows

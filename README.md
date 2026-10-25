@@ -118,6 +118,15 @@ scores, and `Time TBD` for unannounced times. All games on the selected day rema
 including completed games. Empty days and unavailable schedules get an explanatory reply;
 long replies are split into messages.
 
+**Team logos:** schedule replies show NBA team logo emojis beside the abbreviations. At startup,
+the bot reuses its existing `nba_<TEAM>` application emojis and uploads missing logos from
+ESPN's image CDN. These belong to the bot application, not a particular server. No manual
+emoji IDs or database setup are needed. Existing emojis are never replaced or deleted.
+
+Emoji setup is limited to 60 seconds. If a download or upload fails, the schedule still shows
+the team abbreviation; missing logos are retried on the next bot restart. No extra recurring
+job is added. The first start after this update may take longer while logos are uploaded.
+
 ## Participants
 
 Who is in the pool is one file: `seed/participants.csv`. Every sync (every 10 minutes, and when the
@@ -197,7 +206,9 @@ flowchart TD
 
 Locally, `uv --env-file .env` loads the environment before the program starts. Database setup
 applies migrations and ensures the season exists. `controllers/routes.py` lists the slash
-commands. The timer and the standalone `sync` job both call `services/sync.py: sync_now()`.
+commands. During startup, `controllers/team_emojis.py` loads or creates optional team emojis
+before the sync timer starts; emoji failures are logged and startup continues. The timer and
+the standalone `sync` job both call `services/sync.py: sync_now()`.
 
 **One command** (`/psek-nba-pool`):
 
@@ -248,11 +259,13 @@ src/fantasy_bot/
   contracts/        nbafantasy's JSON payloads, as pydantic models (what we receive)
   models/           our own data, one file per area (what we work with)
   controllers/      one file per slash command: call a service, format the reply
+                    team_emojis.py reuses and uploads Discord application emojis
   services/         one job each: standings, money, pool, chart, schedule, participants, sync;
                     prizes.py is the 50/30/15/5 split, chart_drawing.py the PNGs
+                    team_logos.py selects missing NBA team logos
   repositories/     SQL, one file per kind of data: points, participants, season, nbafantasy
                     queries.py holds shared SQL expressions for participant names
-  clients/          HTTP calls to nbafantasy
+  clients/          HTTP calls to nbafantasy and ESPN team-logo downloads
   database/         SQLAlchemy engine and sessions, table mappings, migrations
 ```
 

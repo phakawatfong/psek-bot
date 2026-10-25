@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from fantasy_bot.config.league import LeagueConfig
 from fantasy_bot.controllers.routes import register_all
+from fantasy_bot.controllers.team_emojis import load_team_emojis
 from fantasy_bot.services.sync import sync_now
 
 log = logging.getLogger(__name__)
@@ -25,7 +26,8 @@ class FantasyBot(discord.Client):
         self.tree = app_commands.CommandTree(self)
         self.guild = discord.Object(id=guild_id) if guild_id else None
         self.sync_loop = tasks.loop(minutes=league.sync_interval_minutes)(self.sync_once)
-        register_all(self.tree, sessions, league.season_id)
+        self.team_icons: dict[str, str] = {}
+        register_all(self.tree, sessions, league.season_id, self.team_icons)
 
     async def setup_hook(self) -> None:
         # Guild sync shows commands instantly; global sync can take a while to appear. It also
@@ -33,6 +35,7 @@ class FantasyBot(discord.Client):
         if self.guild:
             self.tree.copy_global_to(guild=self.guild)
         await self.tree.sync(guild=self.guild)
+        await load_team_emojis(self, self.team_icons)
         self.sync_loop.start()
 
     async def sync_once(self) -> None:
