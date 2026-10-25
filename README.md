@@ -61,7 +61,7 @@ server needs no open ports except SSH.
    It installs everything it needs (git, curl, cron, Docker), so a bare image is fine, but it
    only supports Ubuntu and Debian: on Amazon Linux it stops with a message saying so.
    (Without a launch script, SSH in and run `curl -fsSL
-   https://raw.githubusercontent.com/phakawatfong/psek-bot/main/deploy/setup.sh | sudo bash`.)
+https://raw.githubusercontent.com/phakawatfong/psek-bot/main/deploy/setup.sh | sudo bash`.)
 3. **Copy secrets and start**, from your computer:
 
    ```bash
@@ -90,22 +90,22 @@ then `docker compose start bot`.
 Every command is listed in one routes table, `src/fantasy_bot/controllers/routes.py`, and every
 name starts with `psek-nba-`.
 
-| Command | Shows |
-|---|---|
-| `/psek-nba-standings` | Every team, 1st to last, by season points, with the gap to the leader |
-| `/psek-nba-money` | Each person's win or loss in every final gameweek, and the season total |
-| `/psek-nba-pool [gameweek]` | One gameweek's pool: what each person put in, their points, and what they win (default: the latest gameweek, even if it isn't final yet) |
-| `/psek-nba-chart [by]` | A picture: `day` (default) is every team's season total after each day; `gameweek` is each team's points in every gameweek, as bars |
-| `/psek-nba-schedule [gameweek] [day]` | NBA matches for a fantasy day, with Bangkok tip-off times; gameweek alone shows the whole week |
+| Command                               | Shows                                                                                                                                    |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `/psek-nba-standings`                 | Every team, 1st to last, by season points, with the gap to the leader                                                                    |
+| `/psek-nba-money`                     | Each person's win or loss in every final gameweek, and the season total                                                                  |
+| `/psek-nba-pool [gameweek]`           | One gameweek's pool: what each person put in, their points, and what they win (default: the latest gameweek, even if it isn't final yet) |
+| `/psek-nba-chart [by]`                | A picture: `day` (default) is every team's season total after each day; `gameweek` is each team's points in every gameweek, as bars      |
+| `/psek-nba-schedule [gameweek] [day]` | NBA matches for a fantasy day, with Bangkok tip-off times; gameweek alone shows the whole week                                           |
 
 **Schedule selection:**
 
-| Example | Shows |
-|---|---|
-| `/psek-nba-schedule` | Current fantasy gameweek and day |
-| `/psek-nba-schedule day:3` | Day 3 of the current fantasy gameweek |
-| `/psek-nba-schedule gameweek:2 day:3` | Day 3 within gameweek 2 |
-| `/psek-nba-schedule gameweek:2` | Every day in gameweek 2 |
+| Example                               | Shows                                 |
+| ------------------------------------- | ------------------------------------- |
+| `/psek-nba-schedule`                  | Current fantasy gameweek and day      |
+| `/psek-nba-schedule day:3`            | Day 3 of the current fantasy gameweek |
+| `/psek-nba-schedule gameweek:2 day:3` | Day 3 within gameweek 2               |
+| `/psek-nba-schedule gameweek:2`       | Every day in gameweek 2               |
 
 Day numbers restart at 1 each gameweek. The current fantasy day starts at its deadline and
 lasts until the next day's deadline, even if its games have finished; it is not determined by
@@ -134,8 +134,9 @@ bot starts) makes the pool match it exactly.
 
 ```csv
 entry_id,from_gameweek,name
-31818,1,pisit
-40823,2,settakarn
+31818,1,kids
+40823,2,beam
+12384,3,nut
 ```
 
 - `entry_id`: the number in the team's nbafantasy URL, e.g. `nbafantasy.nba.com/entry/31818`.
@@ -143,13 +144,13 @@ entry_id,from_gameweek,name
 - `name`: optional, only to make the file readable.
 - Lines starting with `#` and blank lines are ignored.
 
-| To | Do |
-|---|---|
-| Add someone | Add a row |
-| Fix someone's start week | Change their `from_gameweek` |
-| Remove someone | Delete their row |
-| Apply it now instead of within 10 minutes | `docker compose run --rm bot sync` (or `uv run --env-file .env fantasy-bot sync` locally) |
-| Create the file from who's in the pool today | `docker compose run --rm bot export-participants > seed/participants.csv` |
+| To                                           | Do                                                                                        |
+| -------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Add someone                                  | Add a row                                                                                 |
+| Fix someone's start week                     | Change their `from_gameweek`                                                              |
+| Remove someone                               | Delete their row                                                                          |
+| Apply it now instead of within 10 minutes    | `docker compose run --rm bot sync` (or `uv run --env-file .env fantasy-bot sync` locally) |
+| Create the file from who's in the pool today | `docker compose run --rm bot export-participants > seed/participants.csv`                 |
 
 Two safety rules: a **missing file** changes nothing, and **any bad row** (a typo, a duplicate, a
 team not in the league) means nothing changes. Either way the sync log says why, with line
@@ -164,13 +165,13 @@ format. Docker mounts the whole `seed/` folder read-only, so any editor's save i
 `WEEKLY_BUY_IN` in `.env` (default `50`) is what each person pays into each gameweek's pool, from
 the week they joined. Each week's pool is split by that week's points, net of transfer costs:
 
-| Place | Share of the pool |
-|---|---|
-| 1st | 50% |
-| 2nd | 30% |
-| 3rd | 15% |
-| 4th | 5% |
-| 5th and below | nothing |
+| Place         | Share of the pool |
+| ------------- | ----------------- |
+| 1st           | 50%               |
+| 2nd           | 30%               |
+| 3rd           | 15%               |
+| 4th           | 5%                |
+| 5th and below | nothing           |
 
 - **Ties** average the prizes of the places they cover: two tied for 2nd each get
   (30% + 15%) / 2 = 22.5%; two tied for 4th share its 5%.
@@ -237,10 +238,10 @@ Schedule is the exception: `controllers/schedule.py` acknowledges the request, t
 directly. It does not read or write the database. At startup, each controller's `handler()`
 builds the callback; its inner `handle()` runs when someone uses the command.
 
-| To change | Start in |
-|---|---|
-| A command's reply | `controllers/` |
-| A calculation or sync rule | `services/` |
+| To change                    | Start in        |
+| ---------------------------- | --------------- |
+| A command's reply            | `controllers/`  |
+| A calculation or sync rule   | `services/`     |
 | What data is read or written | `repositories/` |
 
 ## Layout
