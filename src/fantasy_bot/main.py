@@ -1,63 +1,119 @@
+"""Start here. Every run does the same three things:
+
+1. load the config from .env
+2. build what every job needs: the migrated database and the season row
+3. run the job named on the command line (default: the Discord bot)
+"""
+
 import argparse
 import asyncio
 import logging
 import sys
+from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 
-from fantasy_bot.bot.client import FantasyBot
-from fantasy_bot.config.settings import ConfigError, Settings
-from fantasy_bot.repositories.database import backup, connect, migrate
-from fantasy_bot.repositories.seasons import ensure_season
-from fantasy_bot.services.rules import config_drift, get_rules
+from sqlalchemy import Engine
+from sqlalchemy.orm import Session, sessionmaker
+
+from fantasy_bot.config import Config, ConfigError, load_config
+from fantasy_bot.database.connection import backup, create, migrate, sessions
+from fantasy_bot.discord_bot import FantasyBot
+from fantasy_bot.repositories import season
+from fantasy_bot.services.participants import export_csv
 from fantasy_bot.services.sync import sync_now
 
 
+@dataclass(frozen=True)
+class App:
+    config: Config
+    engine: Engine
+    sessions: sessionmaker[Session]
+
+
 def main() -> None:
+    command = parse_args()
+    try:
+        config = load_config()  # 1.
+    except ConfigError as e:
+        sys.exit(f"Config error: {e}")
+    app = build(config)  # 2.
+    job, _ = JOBS[command]
+    job(app)  # 3.
+
+
+def parse_args() -> str:
     parser = argparse.ArgumentParser(prog="fantasy-bot")
     parser.add_argument(
         "command",
         nargs="?",
-        choices=["bot", "sync", "backup"],
+        choices=list(JOBS),
         default="bot",
-        help=(
-            "bot: run the Discord bot (default). sync: copy nbafantasy data once and exit."
-            " backup: write today's copy of the database to a backups folder beside it."
-        ),
+        help=" ".join(f"{name}: {help}." for name, (_, help) in JOBS.items()),
     )
-    command = parser.parse_args().command
-    try:
-        settings = Settings.from_env()
-    except ConfigError as e:
-        sys.exit(f"Config error: {e}")
+    command: str = parser.parse_args().command
+    return command
 
-    conn = connect(settings.db_path)
-    migrate(conn)
-    ensure_season(conn, settings.season_id, settings.league_id, settings.pool_rules)
-    for difference in config_drift(get_rules(conn, settings.season_id), settings.pool_rules):
+
+def build(config: Config) -> App:
+    """Open and migrate the database, and create the season row on the first run."""
+    engine = create(config.database.path)
+    migrate(engine)
+    session_factory = sessions(engine)
+    league = config.league
+    with session_factory() as session:
+        season.ensure_season(
+            session, league.season_id, league.league_id, league.weekly_buy_in_minor
+        )
+        session.commit()
+        buy_in = season.weekly_buy_in(session, league.season_id)
+    if buy_in != league.weekly_buy_in_minor:
         print(
-            f"WARNING: {difference}. Money rules are fixed for a season so past weeks never"
-            " change; the season's rules stay in force. Use a new SEASON_ID to change them.",
+            f"WARNING: WEEKLY_BUY_IN is {league.weekly_buy_in_minor / 100:g} in .env, but this"
+            f" season uses {buy_in / 100:g}. The buy-in is fixed for a season so past weeks"
+            " never change; use a new SEASON_ID to change it.",
             file=sys.stderr,
         )
+    return App(config, engine, session_factory)
 
-    if command == "backup":
-        print(
-            f"Backed up to {backup(conn, Path(settings.db_path).parent / 'backups', date.today())}"
-        )
-        return
 
-    if command == "sync":
-        logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
-        result = asyncio.run(sync_now(conn, settings.season_id))
-        print(
-            f"Synced days {result.days_synced or 'none'} for {result.entries} entries,"
-            f" {len(result.mismatches)} point mismatches"
-        )
-        return
+def run_bot(app: App) -> None:
+    bot = FantasyBot(app.sessions, app.config.league, app.config.discord.guild_id)
+    bot.run(app.config.discord.token)
 
-    bot = FantasyBot(conn, settings.season_id, settings.guild_id, settings.sync_interval_minutes)
-    bot.run(settings.discord_token)
+
+def run_sync(app: App) -> None:
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
+    league = app.config.league
+    with app.sessions() as session:
+        result = asyncio.run(sync_now(session, league.season_id, league.participants_file))
+    print(
+        f"Synced days {result.days_synced or 'none'} for {result.entries} entries,"
+        f" {len(result.mismatches)} point mismatches"
+    )
+
+
+def run_backup(app: App) -> None:
+    folder = Path(app.config.database.path).parent / "backups"
+    print(f"Backed up to {backup(app.engine, folder, date.today())}")
+
+
+def run_export_participants(app: App) -> None:
+    with app.sessions() as session:
+        print(export_csv(session, app.config.league.season_id), end="")
+
+
+# Every job, by the name typed on the command line.
+JOBS: dict[str, tuple[Callable[[App], None], str]] = {
+    "bot": (run_bot, "run the Discord bot (default)"),
+    "sync": (run_sync, "apply the participants file, copy nbafantasy data once, and exit"),
+    "backup": (run_backup, "write today's copy of the database to a backups folder beside it"),
+    "export-participants": (
+        run_export_participants,
+        "print today's participants as a participants.csv",
+    ),
+}
 
 
 if __name__ == "__main__":

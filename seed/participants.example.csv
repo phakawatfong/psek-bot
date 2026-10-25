@@ -1,0 +1,12 @@
+# Who is in the pool. Copy this file to participants.csv (same folder) and edit it.
+# The bot makes the pool match this file on every sync (every 10 minutes, or run
+# `docker compose run --rm bot sync` to apply it now):
+#   add a row to add someone, change from_gameweek to move their start,
+#   delete a row to remove them.
+# entry_id: the number in the team's nbafantasy URL, e.g. nbafantasy.nba.com/entry/31818
+# from_gameweek: the first gameweek they pay into and play for
+# name: optional, only to make this file readable
+entry_id,from_gameweek,name
+12345,1,alice
+23456,1,bob
+34567,2,carol joined in gameweek 2

@@ -1,52 +1,68 @@
-import sqlite3
+from collections.abc import Iterator
 
 import pytest
+from sqlalchemy import Engine, update
+from sqlalchemy.orm import Session
 
-from fantasy_bot.repositories.database import connect, migrate
+from fantasy_bot.database import tables as t
+from fantasy_bot.database.connection import create, migrate
 
 SEASON = "2026-27"
 
 
 @pytest.fixture
-def conn() -> sqlite3.Connection:
-    conn = connect(":memory:")
-    migrate(conn)
-    return conn
+def engine() -> Engine:
+    engine = create(":memory:")
+    migrate(engine)
+    return engine
 
 
 @pytest.fixture
-def seeded(conn: sqlite3.Connection) -> sqlite3.Connection:
-    """Five entries over two final days of gameweek 1; entry 104 has no data, 105 is pending.
+def session(engine: Engine) -> Iterator[Session]:
+    with Session(engine) as session:
+        yield session
 
-    The season uses the default weekly buy-in of 100.00 and a 50/30/20 split.
+
+@pytest.fixture
+def seeded(session: Session) -> Session:
+    """Five league entries over two final days of gameweek 1. Four are participants: 104 has
+    no data yet, and 105 (Echo) is in the league but not in the pool.
+
+    The season uses the default weekly buy-in of 100.00. Rows are flushed
+    in foreign-key order: the mappings have no relationship()s, so SQLAlchemy doesn't order
+    inserts across tables by itself.
     """
-    conn.execute("INSERT INTO season (season_id, league_id) VALUES (?, 14)", (SEASON,))
-    conn.executemany(
-        "INSERT INTO payout_rank VALUES (?, ?, ?)",
-        [(SEASON, 1, 5000), (SEASON, 2, 3000), (SEASON, 3, 2000)],
+    session.add(t.Season(season_id=SEASON, league_id=14, weekly_buy_in_minor=10000))
+    session.flush()  # the season first: everything else points at it
+    session.add_all(
+        t.Day(
+            season_id=SEASON,
+            day_id=day,
+            gameweek=1,
+            name=f"Gameweek 1 - Day {day}",
+            deadline_time="2026-10-20T18:30:00Z",
+            finished=True,
+            data_checked=True,
+            facts_final=False,
+        )
+        for day in (1, 2)
     )
-    conn.executemany(
-        "INSERT INTO day (season_id, day_id, gameweek, name, deadline_time, finished,"
-        " data_checked) VALUES (?, ?, 1, ?, '2026-10-20T18:30:00Z', 1, 1)",
-        [(SEASON, 1, "Gameweek 1 - Day 1"), (SEASON, 2, "Gameweek 1 - Day 2")],
+    session.add_all(
+        t.Entry(
+            season_id=SEASON, entry_id=entry, entry_name=name, manager_name="manager", started_day=1
+        )
+        for entry, name in [
+            (101, "Alpha"),
+            (102, "Bravo"),
+            (103, "Charlie"),
+            (104, "Delta"),
+            (105, "Echo"),
+        ]
     )
-    entries = [(101, "Alpha"), (102, "Bravo"), (103, "Charlie"), (104, "Delta"), (105, "Echo")]
-    conn.executemany(
-        "INSERT INTO entry (season_id, entry_id, entry_name, manager_name)"
-        " VALUES (?, ?, ?, 'manager')",
-        [(SEASON, e, n) for e, n in entries],
-    )
-    participants = [  # (discord user, entry, status)
-        (11, 101, "approved"),
-        (12, 102, "approved"),
-        (13, 103, "approved"),
-        (14, 104, "approved"),
-        (15, 105, "pending"),
-    ]
-    conn.executemany(
-        "INSERT INTO participant (season_id, discord_user_id, entry_id, status, registered_at)"
-        " VALUES (?, ?, ?, ?, '2026-10-24T00:00:00Z')",
-        [(SEASON, *p) for p in participants],
+    session.flush()  # days and entries, before the facts that point at them
+    session.add_all(  # Echo (105) is in the league but not in the pool
+        t.Participant(season_id=SEASON, entry_id=entry, joined_gameweek=1)
+        for entry in (101, 102, 103, 104)
     )
     day_totals = [  # (entry, day, day points, running total)
         (101, 1, 400, 400), (101, 2, 300, 700),
@@ -54,23 +70,64 @@ def seeded(conn: sqlite3.Connection) -> sqlite3.Connection:
         (103, 1, 200, 200), (103, 2, 300, 500),
         (105, 1, 9000, 9000), (105, 2, 9000, 18000),
     ]  # fmt: skip
-    conn.executemany(
-        "INSERT INTO fact_entry_day VALUES (?, ?, ?, ?, ?, 0, 0, NULL)",
-        [(SEASON, *d) for d in day_totals],
+    session.add_all(
+        t.FactEntryDay(
+            season_id=SEASON,
+            entry_id=entry,
+            day_id=day,
+            points=points,
+            total_points=total,
+            transfers_cost=0,
+            points_on_bench=0,
+        )
+        for entry, day, points, total in day_totals
     )
-    return conn
+    session.commit()
+    return session
 
 
 @pytest.fixture
-def league(seeded: sqlite3.Connection) -> sqlite3.Connection:
-    """The seeded league plus Foxtrot (106), a league team nobody has registered.
+def league(seeded: Session) -> Session:
+    """The seeded league plus Foxtrot (106), a league team that isn't in the pool."""
+    seeded.add(
+        t.Entry(
+            season_id=SEASON, entry_id=106, entry_name="Foxtrot", manager_name="fox", started_day=1
+        )
+    )
+    seeded.commit()
+    return seeded
 
-    Seeded participants 101-105 were entered by hand with placeholder ids 11-15.
-    """
+
+@pytest.fixture
+def two_weeks(seeded: Session) -> Session:
+    """Adds gameweek 2: one day, not final yet. Delta joins from gameweek 2 on."""
+    seeded.add(
+        t.Day(
+            season_id=SEASON,
+            day_id=3,
+            gameweek=2,
+            name="Gameweek 2 - Day 1",
+            deadline_time="2026-10-27T18:00:00Z",
+            finished=False,
+            data_checked=False,
+            facts_final=False,
+        )
+    )
+    seeded.flush()
+    seeded.add_all(
+        t.FactEntryDay(
+            season_id=SEASON,
+            entry_id=entry,
+            day_id=3,
+            points=points,
+            total_points=total,
+            transfers_cost=0,
+            points_on_bench=0,
+        )
+        for entry, points, total in [(101, 600, 1300), (102, 100, 1000), (103, 300, 800)]
+    )
     seeded.execute(
-        "INSERT INTO entry (season_id, entry_id, entry_name, manager_name)"
-        " VALUES (?, 106, 'Foxtrot', 'fox manager')",
-        (SEASON,),
+        update(t.Participant).where(t.Participant.entry_id == 104).values(joined_gameweek=2)
     )
     seeded.commit()
     return seeded

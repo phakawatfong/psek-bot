@@ -5,8 +5,12 @@ services:
     env_file: .env
     environment:
       DB_PATH: /data/bot.db # inside the volume, whatever .env says
+      PARTICIPANTS_FILE: /seed/participants.csv
     volumes:
       - bot-data:/data
+      # The folder, not the file: editors that save by replacing the file would otherwise
+      # leave the container reading the old copy.
+      - ./seed:/seed:ro
     restart: unless-stopped
     logging: # Docker keeps logs forever by default; cap them at 3 x 10MB
       driver: json-file

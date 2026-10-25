@@ -66,12 +66,9 @@ server needs no open ports except SSH.
    ssh ubuntu@<server-ip> 'chmod 600 /opt/psek-bot/.env && cd /opt/psek-bot && docker compose up -d --build'
    ```
 
-4. **Optional: bring your local data** (registered participants) instead of starting empty:
-
-   ```bash
-   scp bot.db ubuntu@<server-ip>:/tmp/bot.db
-   ssh ubuntu@<server-ip> 'cd /opt/psek-bot && docker compose stop bot && docker compose cp /tmp/bot.db bot:/data/bot.db && docker compose start bot'
-   ```
+4. **Say who's in the pool**: create `seed/participants.csv` on the server (see
+   [Participants](#participants)). Until it exists the pool stays as it is, and the bot logs a
+   warning on every sync.
 
 Stop any bot you run locally first: two processes with the same token both answer commands.
 
@@ -87,115 +84,106 @@ then `docker compose start bot`.
 
 ## Commands
 
-Every command is listed in one routes table in `src/fantasy_bot/bot/commands/__init__.py`, and
-every name starts with `psek-nba-`.
+Every command is listed in one routes table, `src/fantasy_bot/controllers/routes.py`, and every
+name starts with `psek-nba-`.
 
 | Command | Shows |
 |---|---|
-| `/psek-nba-standings [gameweek]` | Teams ranked by season points (or one gameweek), with the gap to the leader |
-| `/psek-nba-points [gameweek] [day]` | Each team's points on the latest day, one day of a gameweek (`day:1` = its first day), or every played day of a gameweek, with season totals, marked live or final |
-| `/psek-nba-chart` | A picture of every team's season points growing day by day, with gameweek boundaries |
-| `/psek-nba-schedule [gameweek] [day]` | NBA games for the upcoming day (the first not yet finished), a whole gameweek, or one day of it (`day:1` = its first day), with team logos and dates and times in UTC+7 |
-| `/psek-nba-participants` | Every team in the league: in the pool, waiting for approval, or not registered yet, with who registered each |
-| `/psek-nba-rules` | The season's prize pool rules in plain words: buy-in, split, ties, rounding, when a week counts |
-| `/psek-nba-money [gameweek]` | Season money over every final week plus the current week so far, or one week's pool |
-| `/psek-nba-register team` | Join the pool: start typing your nbafantasy team and pick it |
-| `/psek-nba-add team [member] [from_gameweek]` | Admin: put a friend's team straight into the pool, linked to their Discord account if given |
-| `/psek-nba-approve team [from_gameweek]` | Admin: let a registered team into the pool, optionally from an earlier gameweek |
-| `/psek-nba-paid team amount [direction] [note]` | Admin: record real money paid into (`in`) or out of (`out`) the pot |
-| `/psek-nba-edit team [from_gameweek] [member]` | Admin: change a registered team's start week or linked Discord account |
-| `/psek-nba-remove team` | Admin: take a team out of the pool with its payment records; the reply says how to undo it |
-| `/psek-nba-reset` | Admin: remove every team and payment record this season, after a confirm button |
+| `/psek-nba-standings` | Every team, 1st to last, by season points, with the gap to the leader |
+| `/psek-nba-money` | Each person's win or loss in every final gameweek, and the season total |
+| `/psek-nba-pool [gameweek]` | One gameweek's pool: what each person put in, their points, and what they win (default: the latest gameweek, even if it isn't final yet) |
+| `/psek-nba-chart [by]` | A picture: `day` (default) is every team's season total after each day; `gameweek` is each team's points in every gameweek, as bars |
 
-## Team logos
+## Participants
 
-On first start (or right after the first sync, once teams are known) the bot uploads the 30 NBA
-team logos as its own application emojis, named `nba_ATL`, `nba_BOS`, and so on. They belong to
-the bot, so they work in every server without any server permission, and later starts reuse
-them. You can see or delete them in the Developer Portal under your application's **Emojis**
-tab. Logos come from ESPN's public image CDN; if one can't be fetched, that team shows its code.
+Who is in the pool is one file: `seed/participants.csv`. Every sync (every 10 minutes, and when the
+bot starts) makes the pool match it exactly.
 
-## Registering friends
+```csv
+entry_id,from_gameweek,name
+31818,1,pisit
+40823,2,settakarn
+```
 
-1. Each friend runs `/psek-nba-register` and picks their team from the dropdown, which lists every
-   team in the league (refreshed each sync). It records their Discord account and marks them
-   pending, starting from the next gameweek, or the current one if it hasn't started.
-2. An admin runs `/psek-nba-approve`. Use `from_gameweek:1` to backdate friends who were in from
-   the start.
-3. Or an admin adds teams for everyone with `/psek-nba-add`, which puts a team straight into the
-   pool. Pick the friend as `member` to link their Discord account now; leave it empty and the
-   team gets a placeholder id they can claim later.
-4. A team entered by hand with a placeholder Discord id is claimed by the first friend who
-   registers it: only its Discord id changes, its approval and start week stay. A team already
-   linked to a real account can't be taken by someone else.
+- `entry_id`: the number in the team's nbafantasy URL, e.g. `nbafantasy.nba.com/entry/31818`.
+- `from_gameweek`: the first gameweek they pay into and play for.
+- `name`: optional, only to make the file readable.
+- Lines starting with `#` and blank lines are ignored.
 
-Record real money with `/psek-nba-paid` as it moves. `/psek-nba-money` then shows, for each
-person, whether they owe the pot, are owed by it, or are settled: their season net, plus what
-they paid in, minus what they were paid out.
-
-## Fixing mistakes
-
-| Mistake | Fix |
+| To | Do |
 |---|---|
-| Wrong start week | `/psek-nba-edit team:… from_gameweek:N` |
-| Team linked to the wrong person | `/psek-nba-edit team:… member:@right-person` |
-| Team added by mistake | `/psek-nba-remove team:…`; its reply gives the exact command to undo it |
-| Everything is a mess | `/psek-nba-reset`, then add everyone again; it asks for confirmation first |
+| Add someone | Add a row |
+| Fix someone's start week | Change their `from_gameweek` |
+| Remove someone | Delete their row |
+| Apply it now instead of within 10 minutes | `docker compose run --rm bot sync` (or `uv run --env-file .env fantasy-bot sync` locally) |
+| Create the file from who's in the pool today | `docker compose run --rm bot export-participants > seed/participants.csv` |
 
-These only change registrations and payment records: points synced from nbafantasy, the prize
-rules, and other seasons are never touched. Because money is recomputed from points on every
-call, moving a start week or removing a team changes the pools of the weeks it covered, including
-finished ones; the replies name those weeks. The nightly backups in `/data/backups` are the last
-resort.
+Two safety rules: a **missing file** changes nothing, and **any bad row** (a typo, a duplicate, a
+team not in the league) means nothing changes. Either way the sync log says why, with line
+numbers. Moving a start week or removing someone changes the pools of the weeks it covered,
+including finished ones, because money is recomputed from points.
 
-## Who is an admin
-
-Discord decides, not the bot: it checks before a command ever reaches the bot. By default
-`/psek-nba-approve` and `/psek-nba-paid` work only for the server owner and members of a role with
-the **Manage Server** permission, and everyone else doesn't even see them.
-
-To see who that is: **Server Settings > Roles**, open each role, and look for Manage Server.
-
-To make someone an admin of the pool without giving them Manage Server (which also lets them
-change the whole server): **Server Settings > Integrations >** the bot **>** `/psek-nba-approve`
-(and again for `/psek-nba-paid`) **> Add Roles or Members**, and allow a role such as "Pool admin"
-or the people themselves. Discord applies these overrides, so nothing in the bot changes.
+The file is git-ignored because the repo is public; `seed/participants.example.csv` shows the
+format. Docker mounts the whole `seed/` folder read-only, so any editor's save is seen.
 
 ## Weekly pool
 
-Two settings in `.env` define the money, both in plain units:
+`WEEKLY_BUY_IN` in `.env` (default `100`) is what each person pays into each gameweek's pool, from
+the week they joined. Each week's pool is split by that week's points, net of transfer costs:
 
-| Setting | Default | Meaning |
-|---|---|---|
-| `WEEKLY_BUY_IN` | `100` | What each person pays into each gameweek's pool, from the week they joined |
-| `PAYOUT_SPLIT` | `50,30,20` | Percent of the weekly pool for 1st, 2nd, 3rd, and so on; must add up to 100 |
+| Place | Share of the pool |
+|---|---|
+| 1st | 50% |
+| 2nd | 30% |
+| 3rd | 15% |
+| 4th | 5% |
+| 5th and below | nothing |
 
-Each week's pool is split by that week's points, net of transfer costs. `/psek-nba-rules` states
-every rule with this season's numbers, and the steps are in `calculations/payout.py: settle()`. Nothing is stored: every
-`/psek-nba-money` recomputes the weeks from the synced points. A week counts toward the season
-once nbafantasy marks all its days final. The buy-in and split are saved when the season is
-created and never change after that, because changing them would rewrite every past week. If
-`.env` later says something different, the bot logs a warning naming both values and keeps the
-season's; use a new `SEASON_ID` to start a season with new rules.
+- **Ties** average the prizes of the places they cover: two tied for 2nd each get
+  (30% + 15%) / 2 = 22.5%; two tied for 4th share its 5%.
+- **Fewer than 4 people**: the prizes in use scale up so the whole pool is paid; three people
+  get 52.6%, 31.6%, 15.8%.
+- **Rounding**: whole cents; leftover cents go to the largest remainders, so payouts always add
+  up to the pool exactly.
+
+The split is the same every season and lives in one place, `PRIZES` in `services/prizes.py`, whose
+`settle()` docstring walks through these steps. Nothing is stored: every `/psek-nba-money`
+recomputes the weeks from the synced points, so a week counts toward the season once nbafantasy
+marks all its days final. The buy-in is saved when the season is created and never changes after
+that, because changing it would rewrite every past week. If `.env` later says something
+different, the bot logs a warning naming both values and keeps the season's.
 
 ## Layout
 
-Imports only point down this list. Services never import `discord`, so the same data can feed
-a reply, a chart, or a scheduled post.
+Folders by layer. To follow how a command works, read in this order: `main.py`, then
+`controllers/routes.py` (every command), then that command's controller, its service, and the
+repositories it uses.
 
 ```
 src/fantasy_bot/
-  main.py          start-up: load settings, migrate the database, start the bot
-  config/          Settings read from the environment
-  bot/             Discord: client, routes table and one handler module per command in commands/
-  services/        one job each, e.g. money.get_money_summary; returns plain data
-  clients/         outside APIs (nbafantasy); fetch + parse JSON into models
-  repositories/    SQL only, plus migrations/
-  calculations/    pure rules, e.g. payout.settle
-  models.py        dataclasses shared by every layer
+  main.py           1. load the config  2. build the database and season  3. run the job
+  discord_bot.py    the Discord client: registers the routes, runs the sync loop
+  config/           .env, one small typed config each for discord, database, league
+  contracts/        nbafantasy's JSON payloads, as pydantic models (what we receive)
+  models/           our own data, one file per area (what we work with)
+  controllers/      one file per slash command: call a service, format the reply
+  services/         one job each: standings, money, pool, chart, participants, sync;
+                    prizes.py is the 50/30/15/5 split, chart_drawing.py the PNGs
+  repositories/     SQL, one file per kind of data: points, participants, season, nbafantasy
+  clients/          HTTP calls to nbafantasy
+  database/         SQLAlchemy engine and sessions, table mappings, migrations
 ```
 
-`tests/` mirrors this layout.
+Each folder imports only the ones below it: controllers → services → repositories → database,
+services → clients → contracts, and everything may use models. Only controllers import
+`discord`, and only `services/chart_drawing.py` imports matplotlib. `tests/test_layering.py`
+fails the build if any of this drifts. `tests/` mirrors `src/`.
+
+All database access goes through SQLAlchemy: queries are `select()`/`insert()` statements on the
+mappings in `database/tables.py`, and each command or sync uses its own short session. The
+schema itself is the SQL in `database/migrations/` (STRICT tables, CHECKs, views);
+`tests/database/test_tables.py` fails if the mappings and the migrations disagree. To change the
+schema, add a migration file and update `tables.py` to match.
 
 ## Develop
 

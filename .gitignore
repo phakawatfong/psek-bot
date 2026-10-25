@@ -13,3 +13,6 @@ wheels/
 .env
 *.db
 *.db-*
+
+# The real participants list lives only where the bot runs
+seed/participants.csv

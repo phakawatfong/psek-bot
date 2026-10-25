@@ -12,6 +12,7 @@ dependencies = [
     "discord-py>=2.4",
     "matplotlib>=3.8",
     "pydantic>=2.7",
+    "sqlalchemy>=2.0",
 ]
 
 [project.scripts]
@@ -37,6 +38,11 @@ select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
 [tool.mypy]
 strict = true
 files = ["src", "tests"]
+# Name test modules by folder (tests.money.test_service), so same-named files can coexist.
+explicit_package_bases = true
+mypy_path = ["src", "."]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Feature folders each have e.g. test_service.py; importlib mode lets same-named files coexist.
+addopts = "--import-mode=importlib"
