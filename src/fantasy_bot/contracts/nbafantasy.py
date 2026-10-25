@@ -60,7 +60,7 @@ class FixturePayload(Payload):
     id: int
     event: int
     code: int  # NBA.com game id without its leading zeros
-    kickoff_time: str
+    kickoff_time: str | None
     team_h: int
     team_a: int
     team_h_score: int | None

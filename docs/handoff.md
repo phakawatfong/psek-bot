@@ -8,6 +8,10 @@ something on it, and delete items that are done.
 - Both plans are done: `docs/plans/simplify.md` (four commands, participants file, fixed
   50/30/15/5 prizes) and `docs/plans/layer-folders.md` (folders by layer; `main.py` is
   config → dependencies → job).
+- `docs/plans/schedule.md` is done: `/psek-nba-schedule [gameweek] [day]` is the fifth command.
+  Both options select that day; day alone uses the current gameweek; no options uses the current
+  fantasy day; gameweek alone shows the whole week. Fantasy deadlines define day boundaries.
+  Schedules fetch on demand, show Bangkok times and completed scores, and do not use the database.
 - The current commit is `df76215` (`feat: simplify main`). The shared-query cleanup and
   documentation updates are uncommitted for the owner's review; AGENTS.md and this handoff
   are also untracked. The owner stages and commits changes.
@@ -20,8 +24,10 @@ something on it, and delete items that are done.
 - The default weekly buy-in is now 50.00 (5000 minor units), also reflected in `.env.example`.
   Explicit environment settings and existing seasons keep their own buy-in. Historical
   migrations are unchanged; new seasons receive the configured amount explicitly.
-- Checks rerun after the default buy-in change: 84 tests, ruff format,
+- Checks rerun after adding schedule: 111 tests, ruff format,
   ruff check, and mypy pass.
+  A read-only API check returned GW2's seven days and 49 games. The new command has not been
+  published to Discord; restarting the updated bot registers it through the usual startup.
   No live bot or database sync was run during this cleanup. The previously reported sync on a
   copy of the real database applied the real
   participants file and synced all four teams. No gameweek is final yet, so `/psek-nba-money` shows

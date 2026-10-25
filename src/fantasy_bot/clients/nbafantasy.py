@@ -6,6 +6,7 @@ Fetching and parsing are separate so parsers can be tested against saved respons
 import asyncio
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from datetime import datetime
 from typing import Any
 
 import aiohttp
@@ -31,6 +32,7 @@ from fantasy_bot.models.nbafantasy import (
     PlayerStat,
     Team,
 )
+from fantasy_bot.models.schedule import ScheduleDay, ScheduleGame
 
 BASE_URL = "https://nbafantasy.nba.com/api/"
 USER_AGENT = "psek-nba-bot/0.1 (private friends league)"
@@ -151,6 +153,10 @@ def parse_bootstrap(raw: Any) -> Bootstrap:
 
 
 def parse_fixtures(raw: Any) -> list[Fixture]:
+    fixtures = _FIXTURES.validate_python(raw)
+    # Stored stats refer to started games, for which the database requires a kickoff time.
+    if any(f.kickoff_time is None for f in fixtures):
+        raise ValueError("Cannot sync a fixture without a kickoff time")
     return [
         Fixture(
             fixture_id=f.id,
@@ -163,8 +169,52 @@ def parse_fixtures(raw: Any) -> list[Fixture]:
             away_score=f.team_a_score,
             finished=f.finished,
         )
-        for f in _FIXTURES.validate_python(raw)
+        for f in fixtures
+        if f.kickoff_time is not None
     ]
+
+
+def parse_schedule_calendar(raw: Any) -> tuple[list[ScheduleDay], dict[int, str]]:
+    payload = BootstrapPayload.model_validate(raw)
+    phases = [p for p in payload.phases if p.name.startswith("Gameweek ")]
+    days = [
+        ScheduleDay(
+            gameweek=int(phase.name.removeprefix("Gameweek ")),
+            day=event.id - phase.start_event + 1,
+            event_id=event.id,
+            deadline=_timestamp(event.deadline_time),
+            finished=event.finished,
+        )
+        for phase in phases
+        for event in payload.events
+        if phase.start_event <= event.id <= phase.stop_event
+    ]
+    return sorted(days, key=lambda d: d.deadline), {t.id: t.short_name for t in payload.teams}
+
+
+def parse_schedule_games(raw: Any, event_id: int, teams: dict[int, str]) -> list[ScheduleGame]:
+    fixtures = _FIXTURES.validate_python(raw)
+    if any(f.event != event_id for f in fixtures):
+        raise ValueError("Fixtures do not belong to the requested fantasy day")
+    games = [
+        ScheduleGame(
+            away_team=teams[f.team_a],
+            home_team=teams[f.team_h],
+            kickoff=_timestamp(f.kickoff_time) if f.kickoff_time else None,
+            away_score=f.team_a_score,
+            home_score=f.team_h_score,
+            finished=f.finished,
+        )
+        for f in fixtures
+    ]
+    return sorted(games, key=lambda g: (g.kickoff is None, g.kickoff, g.away_team, g.home_team))
+
+
+def _timestamp(value: str) -> datetime:
+    timestamp = datetime.fromisoformat(value)
+    if timestamp.tzinfo is None:
+        raise ValueError("nbafantasy timestamp has no timezone")
+    return timestamp
 
 
 def parse_live(raw: Any) -> list[PlayerStat]:

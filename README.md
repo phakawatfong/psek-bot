@@ -1,6 +1,7 @@
 # fantasy-bot
 
-Discord bot that summarizes an [NBA Fantasy](https://nbafantasy.nba.com) league and settles the friends' betting pool.
+Discord bot that summarizes an [NBA Fantasy](https://nbafantasy.nba.com) league, shows NBA schedules,
+and settles the friends' betting pool.
 
 Reading the code? Start with [Program flow](#program-flow), then use [Layout](#layout) to find files.
 
@@ -95,6 +96,27 @@ name starts with `psek-nba-`.
 | `/psek-nba-money` | Each person's win or loss in every final gameweek, and the season total |
 | `/psek-nba-pool [gameweek]` | One gameweek's pool: what each person put in, their points, and what they win (default: the latest gameweek, even if it isn't final yet) |
 | `/psek-nba-chart [by]` | A picture: `day` (default) is every team's season total after each day; `gameweek` is each team's points in every gameweek, as bars |
+| `/psek-nba-schedule [gameweek] [day]` | NBA matches for a fantasy day, with Bangkok tip-off times; gameweek alone shows the whole week |
+
+**Schedule selection:**
+
+| Example | Shows |
+|---|---|
+| `/psek-nba-schedule` | Current fantasy gameweek and day |
+| `/psek-nba-schedule day:3` | Day 3 of the current fantasy gameweek |
+| `/psek-nba-schedule gameweek:2 day:3` | Day 3 within gameweek 2 |
+| `/psek-nba-schedule gameweek:2` | Every day in gameweek 2 |
+
+Day numbers restart at 1 each gameweek. The current fantasy day starts at its deadline and
+lasts until the next day's deadline, even if its games have finished; it is not determined by
+Bangkok midnight. Before the season starts, the default shows the first day as upcoming.
+After the final fantasy day finishes, select a gameweek explicitly.
+
+The schedule fetches directly from nbafantasy when requested, so future fixtures do not depend
+on a background sync. Replies show `away @ home`, dates and times in Bangkok (UTC+7), completed
+scores, and `Time TBD` for unannounced times. All games on the selected day remain visible,
+including completed games. Empty days and unavailable schedules get an explanatory reply;
+long replies are split into messages.
 
 ## Participants
 
@@ -198,8 +220,11 @@ sequenceDiagram
     Controller-->>User: Send Discord reply
 ```
 
-Commands read stored data; sync fetches updates from nbafantasy. At startup, each controller's
-`handler()` builds the callback; its inner `handle()` runs when someone uses the command.
+Standings, money, pool and charts read stored data; sync fetches updates from nbafantasy.
+Schedule is the exception: `controllers/schedule.py` acknowledges the request, then
+`services/schedule.py` uses the existing client to fetch the calendar and selected fixtures
+directly. It does not read or write the database. At startup, each controller's `handler()`
+builds the callback; its inner `handle()` runs when someone uses the command.
 
 | To change | Start in |
 |---|---|
@@ -223,7 +248,7 @@ src/fantasy_bot/
   contracts/        nbafantasy's JSON payloads, as pydantic models (what we receive)
   models/           our own data, one file per area (what we work with)
   controllers/      one file per slash command: call a service, format the reply
-  services/         one job each: standings, money, pool, chart, participants, sync;
+  services/         one job each: standings, money, pool, chart, schedule, participants, sync;
                     prizes.py is the 50/30/15/5 split, chart_drawing.py the PNGs
   repositories/     SQL, one file per kind of data: points, participants, season, nbafantasy
                     queries.py holds shared SQL expressions for participant names
