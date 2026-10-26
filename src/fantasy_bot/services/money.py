@@ -1,20 +1,29 @@
 """Each person's money over the season, computed from the stored points on every call."""
 
 from collections import defaultdict
+from collections.abc import Sequence
 
 from sqlalchemy.orm import Session
 
 from fantasy_bot.models.money import MoneyRow, SeasonMoney
 from fantasy_bot.models.participant import ParticipantId
+from fantasy_bot.models.prizes import PrizeRule
 from fantasy_bot.repositories import participants, points, season
+from fantasy_bot.services.prize_rules import weights_for
 from fantasy_bot.services.prizes import season_totals, settle
 
 
-def get_season_money(session: Session, season_id: str) -> SeasonMoney:
+def get_season_money(session: Session, season_id: str, rules: Sequence[PrizeRule]) -> SeasonMoney:
     """Win or loss per final gameweek and in total. Weeks still being played are only named."""
-    weeks = points.pool_weeks(session, season_id)
+    weeks = [
+        w for w in points.pool_weeks(session, season_id) if w.gameweek >= rules[0].from_gameweek
+    ]
     names = participants.names(session, season_id)
-    settled = {w.gameweek: settle(w.standings) for w in weeks if w.final}
+    settled = {
+        w.gameweek: settle(w.standings, weights_for(rules, w.gameweek, len(w.standings)))
+        for w in weeks
+        if w.final
+    }
     nets: dict[ParticipantId, dict[int, int]] = defaultdict(dict)
     for gameweek, settlements in settled.items():
         for s in settlements:

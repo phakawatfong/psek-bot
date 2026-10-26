@@ -1,19 +1,30 @@
 # Handoff
 
-State on 2026-10-25, updated during the Codex cleanup. Update this file when you finish
+State on 2026-10-26, updated after configurable weekly prizes. Update this file when you finish
 something on it, and delete items that are done.
 
 ## Where things stand
 
-- Both plans are done: `docs/plans/simplify.md` (four commands, participants file, fixed
+- `docs/plans/configurable-prizes.md` is done: effective-gameweek prize weights in
+  `seed/prizes.json`, initialized to GW2 with 120/70/50/30/20/10. Every place must have a positive
+  weight, with exactly as many places as eligible participants. Later rules preserve earlier
+  weeks; editing earlier rules deliberately recalculates their covered weeks. No migration.
+- Standings, pool and money now default to the current fantasy gameweek. Money accepts a selected
+  gameweek or `season:true` for accumulated finalized-week totals. Provisional weeks are excluded.
+- The four local private participant rows now start in GW2. The owner will add two more manually.
+  On Lightsail, apply all six entries with `from_gameweek=2`, deploy the prize file, and restart
+  the bot for its updated command options. No live bot, server change, or database reset was run.
+  A count mismatch shows an explanation instead of guessing a payout. Existing buy-in remains
+  unchanged; the server season must already use 50 for the agreed 300 pool.
+- The earlier plans are done (their fixed-prize decisions are superseded): `docs/plans/simplify.md` (four commands, participants file, fixed
   50/30/15/5 prizes) and `docs/plans/layer-folders.md` (folders by layer; `main.py` is
   config → dependencies → job).
 - `docs/plans/schedule.md` is done: `/psek-nba-schedule [gameweek] [day]` is the fifth command.
   Both options select that day; day alone uses the current gameweek; no options uses the current
   fantasy day; gameweek alone shows the whole week. Fantasy deadlines define day boundaries.
   Schedules fetch on demand, show Bangkok times and completed scores, and do not use the database.
-- The current commit is `ddb5604` (`feat: add schedule`). Team-emoji implementation and
-  documentation updates are uncommitted for the owner's review. The owner stages and commits.
+- The current commit is `8e2a258` (`update readme`). Weekly-prize and summary changes are
+  uncommitted for the owner's review. The owner stages and commits.
 - `docs/plans/team-emojis.md` is done: schedule replies include NBA team logo emojis, reused
   from the bot application or uploaded once if missing. Setup runs at startup with a 60-second
   limit. Missing logos fall back to team codes and retry on the next restart; no additional
@@ -27,7 +38,7 @@ something on it, and delete items that are done.
 - The default weekly buy-in is now 50.00 (5000 minor units), also reflected in `.env.example`.
   Explicit environment settings and existing seasons keep their own buy-in. Historical
   migrations are unchanged; new seasons receive the configured amount explicitly.
-- Checks rerun after restoring team emojis: 133 tests, ruff format,
+- Checks rerun after configurable weekly prizes: 180 tests, ruff format,
   ruff check, and mypy pass.
   A read-only API check returned GW2's seven days and 49 games. The new command has not been
   published to Discord by this agent; restarting the updated bot registers it through the usual
@@ -42,13 +53,6 @@ something on it, and delete items that are done.
 1. **Keep `discord_bot.py` at the top level for now.** It manages the client lifecycle and
    sync timer and imports config, which current controller import rules disallow. Moving it
    just to tidy the top level is not part of the agreed readability cleanup.
-2. **Prizes as whole percents?** `PRIZES = (5000, 3000, 1500, 500)` is in basis points, left over
-   from when the split was configurable and could be 33.33%. The split is now fixed in code and
-   every share is a whole percent, so `(50, 30, 15, 5)` would read more plainly. Settlement
-   already divides by the sum of eligible shares; update constants, names, formatting and
-   tests together if approved. This also requires agreement to change AGENTS.md's basis-point
-   convention. Keep basis points until then.
-
 ## Next work
 
 1. **Deploy to the AWS Lightsail server (Ubuntu).** The owner does these steps on the server;

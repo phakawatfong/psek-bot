@@ -2,31 +2,14 @@
 
 from itertools import groupby
 
-from sqlalchemy import and_, func, select
+from sqlalchemy import and_, select
 from sqlalchemy.orm import Session
 
 from fantasy_bot.database import tables as t
 from fantasy_bot.models.chart import PointsSeries
 from fantasy_bot.models.money import PoolWeek, Standing
 from fantasy_bot.models.participant import ParticipantId, ParticipantName
-from fantasy_bot.models.standings import StandingRow
 from fantasy_bot.repositories.queries import ENTRY_OF_PARTICIPANT, MANAGER_NAME, TEAM_NAME
-
-
-def season_table(session: Session, season_id: str) -> list[StandingRow]:
-    standings = t.season_standings
-    points = standings.c.total_points
-    rows = session.execute(
-        select(func.rank().over(order_by=points.desc()), TEAM_NAME, MANAGER_NAME, points)
-        .select_from(t.Participant)
-        .outerjoin(t.Entry, ENTRY_OF_PARTICIPANT)
-        .join(standings, standings.c.participant_id == t.Participant.participant_id)
-        .where(standings.c.season_id == season_id)
-        .order_by(points.desc(), TEAM_NAME)
-    )
-    return [
-        StandingRow(rank, ParticipantName(team, manager), pts) for rank, team, manager, pts in rows
-    ]
 
 
 def daily_totals(session: Session, season_id: str) -> list[PointsSeries]:

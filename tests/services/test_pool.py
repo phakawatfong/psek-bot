@@ -1,10 +1,16 @@
+from datetime import UTC, datetime
+
+import pytest
 from sqlalchemy.orm import Session
 
 from fantasy_bot.database import tables as t
 from fantasy_bot.models.pool import Pool
+from fantasy_bot.models.prizes import PrizeRule
+from fantasy_bot.services.gameweeks import GameweekError
 from fantasy_bot.services.pool import get_pool
 
 SEASON = "2026-27"
+RULES = [PrizeRule(1, (50, 30, 15)), PrizeRule(2, (50, 30, 15, 5))]
 
 
 def lines(pool: Pool | None) -> list[tuple[str, int, int, int, int, int]]:
@@ -17,7 +23,7 @@ def lines(pool: Pool | None) -> list[tuple[str, int, int, int, int, int]]:
 
 
 def test_pool_shows_what_each_person_put_in_and_wins(seeded: Session) -> None:
-    pool = get_pool(seeded, SEASON, 1)
+    pool = get_pool(seeded, SEASON, [PrizeRule(1, (50, 30, 15, 5))], 1)
     assert pool is not None and (pool.gameweek, pool.final) == (1, True)
     assert lines(pool) == [
         ("Bravo", 1, 900, 10000, 20000, 10000),
@@ -27,14 +33,14 @@ def test_pool_shows_what_each_person_put_in_and_wins(seeded: Session) -> None:
     ]
 
 
-def test_default_is_the_latest_gameweek_even_if_not_final(two_weeks: Session) -> None:
-    pool = get_pool(two_weeks, SEASON)
+def test_default_is_current_fantasy_gameweek_even_if_not_final(two_weeks: Session) -> None:
+    pool = get_pool(two_weeks, SEASON, RULES, now=datetime(2026, 10, 28, tzinfo=UTC))
     assert pool is not None and (pool.gameweek, pool.final) == (2, False)
     assert [name for name, *_ in lines(pool)] == ["Alpha", "Charlie", "Bravo", "Delta"]
 
 
 def test_someone_joining_later_is_only_in_later_pools(two_weeks: Session) -> None:
-    assert [name for name, *_ in lines(get_pool(two_weeks, SEASON, 1))] == [
+    assert [name for name, *_ in lines(get_pool(two_weeks, SEASON, RULES, 1))] == [
         "Bravo",
         "Alpha",
         "Charlie",
@@ -42,7 +48,9 @@ def test_someone_joining_later_is_only_in_later_pools(two_weeks: Session) -> Non
 
 
 def test_gameweek_without_points_has_no_pool(seeded: Session, session: Session) -> None:
-    assert get_pool(seeded, SEASON, 5) is None
+    with pytest.raises(GameweekError, match="not in the synced"):
+        get_pool(seeded, SEASON, RULES, 5)
     session.add(t.Season(season_id="2027-28", league_id=99, weekly_buy_in_minor=10000))
     session.commit()
-    assert get_pool(session, "2027-28") is None
+    with pytest.raises(GameweekError, match="No fantasy calendar"):
+        get_pool(session, "2027-28", RULES)

@@ -8,3 +8,10 @@ class StandingRow:
     rank: int
     name: ParticipantName
     points: int
+
+
+@dataclass(frozen=True)
+class GameweekStandings:
+    gameweek: int
+    final: bool
+    rows: list[StandingRow]

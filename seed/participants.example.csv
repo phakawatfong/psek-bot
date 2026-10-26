@@ -7,6 +7,9 @@
 # from_gameweek: the first gameweek they pay into and play for
 # name: optional, only to make this file readable
 entry_id,from_gameweek,name
-12345,1,alice
-23456,1,bob
-34567,2,carol joined in gameweek 2
+10001,2,alpha
+10002,2,bravo
+10003,2,charlie
+10004,2,delta
+10005,2,echo
+10006,2,foxtrot

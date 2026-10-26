@@ -2,117 +2,97 @@ import pytest
 
 from fantasy_bot.models.money import Standing
 from fantasy_bot.models.participant import ParticipantId
-from fantasy_bot.services.prizes import PRIZES, season_totals, settle
+from fantasy_bot.services.prize_rules import PrizeError
+from fantasy_bot.services.prizes import season_totals, settle
+
+WEIGHTS = (120, 70, 50, 30, 20, 10)
 
 
-def standings(*rows: tuple[int, int, int]) -> list[Standing]:
-    return [Standing(ParticipantId(pid), points, buy_in) for pid, points, buy_in in rows]
+def standings(n: int = 6, buy_in: int = 5000) -> list[Standing]:
+    return [Standing(ParticipantId(i), (n - i) * 100, buy_in) for i in range(1, n + 1)]
 
 
-def table(rows: list[Standing]) -> list[tuple[int, int, int, int]]:
-    """(participant, rank, payout, net) for each team, best first."""
-    return [(s.participant_id, s.rank, s.payout, s.net) for s in settle(rows)]
+def test_six_people_pay_50_and_get_the_agreed_payouts() -> None:
+    result = settle(standings(), WEIGHTS)
+    assert [r.payout for r in result] == [12000, 7000, 5000, 3000, 2000, 1000]
+    assert [r.net for r in result] == [7000, 2000, 0, -2000, -3000, -4000]
+    assert sum(r.payout for r in result) == 30000
+    assert sum(r.net for r in result) == 0
 
 
-def test_the_prizes_are_50_30_15_5() -> None:
-    assert PRIZES == (5000, 3000, 1500, 500)
+def test_weights_scale_with_pool_without_rounding_percentages() -> None:
+    result = settle(standings(buy_in=10000), WEIGHTS)
+    assert [r.payout for r in result] == [24000, 14000, 10000, 6000, 4000, 2000]
 
 
-def test_four_teams_take_50_30_15_5_of_the_pool() -> None:
-    # Pool 4 x 1000 = 4000: 2000, 1200, 600, 200.
-    rows = standings((1, 900, 1000), (2, 700, 1000), (3, 500, 1000), (4, 300, 1000))
-    assert table(rows) == [
-        (1, 1, 2000, 1000),
-        (2, 2, 1200, 200),
-        (3, 3, 600, -400),
-        (4, 4, 200, -800),
-    ]
+def test_input_order_does_not_change_result() -> None:
+    assert settle(list(reversed(standings())), WEIGHTS) == settle(standings(), WEIGHTS)
 
 
-def test_fifth_and_below_win_nothing() -> None:
-    # Pool 5000: 2500, 1500, 750, 250, 0.
-    rows = standings(*((pid, 1000 - 100 * pid, 1000) for pid in range(1, 6)))
-    assert [payout for _, _, payout, _ in table(rows)] == [2500, 1500, 750, 250, 0]
+def test_tied_second_and_third_share_their_prizes() -> None:
+    rows = standings()
+    rows[2] = Standing(rows[2].participant_id, rows[1].points, 5000)
+    result = settle(rows, WEIGHTS)
+    assert [r.rank for r in result] == [1, 2, 2, 4, 5, 6]
+    assert [r.payout for r in result] == [12000, 6000, 6000, 3000, 2000, 1000]
 
 
-def test_input_order_does_not_matter() -> None:
-    rows = standings((4, 300, 1000), (2, 700, 1000), (1, 900, 1000), (3, 500, 1000))
-    assert [(pid, payout) for pid, _, payout, _ in table(rows)] == [
-        (1, 2000),
-        (2, 1200),
-        (3, 600),
-        (4, 200),
-    ]
+def test_everyone_tied_splits_evenly() -> None:
+    rows = [Standing(ParticipantId(i), 0, 5000) for i in range(6)]
+    assert [r.payout for r in settle(rows, WEIGHTS)] == [5000] * 6
 
 
-def test_two_tied_for_second_each_get_22_5_percent() -> None:
-    # 2nd and 3rd prizes (30% + 15%) / 2 = 22.5% of 4000 = 900 each.
-    rows = standings((1, 900, 1000), (2, 700, 1000), (3, 700, 1000), (4, 300, 1000))
-    assert table(rows) == [
-        (1, 1, 2000, 1000),
-        (2, 2, 900, -100),
-        (3, 2, 900, -100),
-        (4, 4, 200, -800),
-    ]
+def test_seventh_person_requires_explicit_seven_place_rule() -> None:
+    with pytest.raises(PrizeError, match="one positive"):
+        settle(standings(7), WEIGHTS)
+    result = settle(standings(7), (7, 6, 5, 4, 3, 2, 1))
+    assert len(result) == 7 and all(r.payout > 0 for r in result)
+    assert sum(r.payout for r in result) == 35000
 
 
-def test_two_tied_for_fourth_share_its_5_percent() -> None:
-    # 4th's 5% plus 5th's 0%, halved: 2.5% of 5000 = 125 each.
-    rows = standings((1, 900, 1000), (2, 800, 1000), (3, 700, 1000), (4, 600, 1000), (5, 600, 1000))
-    assert [(pid, rank, payout) for pid, rank, payout, _ in table(rows)][3:] == [
-        (4, 4, 125),
-        (5, 4, 125),
-    ]
+@pytest.mark.parametrize("n", range(1, 11))
+def test_matching_positive_weights_pay_everyone_and_exhaust_pool(n: int) -> None:
+    result = settle(standings(n, buy_in=1001), tuple(range(n, 0, -1)))
+    assert all(r.payout > 0 for r in result)
+    assert sum(r.payout for r in result) == n * 1001
 
 
-def test_everyone_tied_splits_the_pool_evenly() -> None:
-    rows = standings(*((pid, 500, 1000) for pid in range(1, 5)))
-    assert [payout for _, _, payout, _ in table(rows)] == [1000, 1000, 1000, 1000]
+def test_largest_remainder_uses_whole_cents() -> None:
+    rows = [Standing(ParticipantId(1), 100, 51), Standing(ParticipantId(2), 90, 50)]
+    assert [r.payout for r in settle(rows, (2, 1))] == [67, 34]
 
 
-def test_fewer_than_four_teams_scale_the_prizes_up() -> None:
-    # Two teams: 50/30 scaled to 100% is 62.5% and 37.5% of 2000.
-    assert [payout for _, _, payout, _ in table(standings((1, 900, 1000), (2, 700, 1000)))] == [
-        1250,
-        750,
-    ]
-    # Three teams: 50/30/15 scaled to 100% of 3000 is 1578.95, 947.37, 473.68; the two
-    # leftover cents go to the largest remainders, .95 and .68.
-    rows = standings((1, 900, 1000), (2, 700, 1000), (3, 500, 1000))
-    assert [payout for _, _, payout, _ in table(rows)] == [1579, 947, 474]
+@pytest.mark.parametrize("weights", [(1,), (1, 0), (1, -1)])
+def test_invalid_weights_are_rejected(weights: tuple[int, ...]) -> None:
+    with pytest.raises(PrizeError):
+        settle(standings(2), weights)
 
 
-def test_rounding_always_pays_out_exactly_the_pool() -> None:
-    # Pool 1001: 500.50, 300.30, 150.15, 50.05; the leftover cent goes to the .50.
-    rows = standings((1, 900, 251), (2, 700, 250), (3, 500, 250), (4, 300, 250))
-    payouts = [payout for _, _, payout, _ in table(rows)]
-    assert (payouts, sum(payouts)) == ([501, 300, 150, 50], 1001)
-
-
-def test_unequal_buy_ins_still_split_the_whole_pool() -> None:
-    # Pool 2100 between three teams: 1105.26, 663.16, 331.58; the leftover cent goes to .58.
-    rows = standings((1, 900, 100), (2, 700, 1000), (3, 500, 1000))
-    assert table(rows) == [(1, 1, 1105, 1005), (2, 2, 663, -337), (3, 3, 332, -668)]
-
-
-def test_no_participants_settles_nothing() -> None:
-    assert settle([]) == []
+def test_insufficient_pool_is_explained() -> None:
+    with pytest.raises(PrizeError, match="at least one cent"):
+        settle(standings(2, buy_in=1), (1000, 1))
 
 
 def test_negative_buy_in_is_rejected() -> None:
     with pytest.raises(ValueError, match="negative"):
-        settle(standings((1, 900, -1)))
+        settle(standings(1, buy_in=-1), (1,))
 
 
-def test_season_totals_add_up_weeks_and_rank_by_net() -> None:
-    week_1 = settle(standings((1, 900, 100), (2, 700, 100), (3, 500, 100), (4, 300, 100)))
-    week_2 = settle(standings((1, 100, 100), (2, 700, 100), (3, 500, 100), (4, 600, 100)))
-    # Week 1 pays 200/120/60/20 to 1/2/3/4; week 2 pays 200/120/60/20 to 2/4/3/1.
-    assert [
-        (t.participant_id, t.weeks, t.paid, t.won, t.net) for t in season_totals([week_1, week_2])
-    ] == [
-        (2, 2, 200, 320, 120),
-        (1, 2, 200, 220, 20),
-        (4, 2, 200, 140, -60),
-        (3, 2, 200, 120, -80),
-    ]
+def test_no_participants_settles_nothing() -> None:
+    assert settle([], ()) == []
+
+
+def test_weekly_nets_accumulate() -> None:
+    first = settle(standings(), WEIGHTS)
+    second = settle([Standing(r.participant_id, -r.points, 5000) for r in standings()], WEIGHTS)
+    totals = season_totals([first, second])
+    assert sum(t.net for t in totals) == 0
+    assert all(t.weeks == 2 and t.paid == 10000 for t in totals)
+    assert {t.participant_id: t.net for t in totals} == {
+        1: 3000,
+        2: -1000,
+        3: -2000,
+        4: -2000,
+        5: -1000,
+        6: 3000,
+    }

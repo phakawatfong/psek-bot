@@ -29,8 +29,10 @@ def test_optional_values_are_parsed() -> None:
         "DISCORD_GUILD_ID": "123",
         "DB_PATH": "/data/bot.db",
         "PARTICIPANTS_FILE": "/seed/participants.csv",
+        "PRIZES_FILE": "/seed/prizes.json",
     }
     config = load_config(env)
+    assert config.league.prizes_file == Path("/seed/prizes.json")
     assert (config.discord.guild_id, config.database.path, config.league.participants_file) == (
         123,
         "/data/bot.db",

@@ -1,4 +1,5 @@
 from collections.abc import Callable, Coroutine
+from pathlib import Path
 from typing import Any
 
 import discord
@@ -7,7 +8,9 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from fantasy_bot.controllers.formatting import display_name, money, points, ranked, signed
 from fantasy_bot.models.pool import Pool
+from fantasy_bot.services.gameweeks import GameweekError
 from fantasy_bot.services.pool import get_pool
+from fantasy_bot.services.prize_rules import PrizeError, load_rules
 
 
 def format_pool(pool: Pool | None, gameweek: int | None) -> str:
@@ -32,14 +35,18 @@ def _share(payout: int, total: int) -> str:
 
 
 def handler(
-    sessions: sessionmaker[Session], season_id: str
+    sessions: sessionmaker[Session], season_id: str, prizes_file: Path
 ) -> Callable[..., Coroutine[Any, Any, None]]:
-    @app_commands.describe(gameweek="Which gameweek (default: the latest)")
+    @app_commands.describe(gameweek="Which gameweek (default: current fantasy gameweek)")
     async def handle(
-        interaction: discord.Interaction, gameweek: app_commands.Range[int, 1, 30] | None = None
+        interaction: discord.Interaction, gameweek: app_commands.Range[int, 1] | None = None
     ) -> None:
-        with sessions() as session:
-            text = format_pool(get_pool(session, season_id, gameweek), gameweek)
+        try:
+            rules = load_rules(prizes_file)
+            with sessions() as session:
+                text = format_pool(get_pool(session, season_id, rules, gameweek), gameweek)
+        except (GameweekError, PrizeError) as error:
+            text = str(error)
         await interaction.response.send_message(
             text, allowed_mentions=discord.AllowedMentions.none()
         )

@@ -90,13 +90,21 @@ then `docker compose start bot`.
 Every command is listed in one routes table, `src/fantasy_bot/controllers/routes.py`, and every
 name starts with `psek-nba-`.
 
-| Command                               | Shows                                                                                                                                    |
-| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `/psek-nba-standings`                 | Every team, 1st to last, by season points, with the gap to the leader                                                                    |
-| `/psek-nba-money`                     | Each person's win or loss in every final gameweek, and the season total                                                                  |
-| `/psek-nba-pool [gameweek]`           | One gameweek's pool: what each person put in, their points, and what they win (default: the latest gameweek, even if it isn't final yet) |
-| `/psek-nba-chart [by]`                | A picture: `day` (default) is every team's season total after each day; `gameweek` is each team's points in every gameweek, as bars      |
-| `/psek-nba-schedule [gameweek] [day]` | NBA matches for a fantasy day, with Bangkok tip-off times; gameweek alone shows the whole week                                           |
+| Command | Shows |
+|---|---|
+| `/psek-nba-standings [gameweek]` | Eligible teams ranked by that week's points after transfer costs, with the gap to the leader |
+| `/psek-nba-money [gameweek] [season]` | Weekly net win/loss; `season:true` shows finalized weeks and accumulated totals |
+| `/psek-nba-pool [gameweek]` | Weekly points, buy-ins, shares, payouts and net win/loss |
+| `/psek-nba-chart [by]` | `day` shows season cumulative points; `gameweek` shows points for each eligible week |
+| `/psek-nba-schedule [gameweek] [day]` | NBA matches with Bangkok tip-off times; gameweek alone shows the whole week |
+
+Standings, money and pool default to the **current fantasy gameweek**, determined by the synced
+fantasy deadlines. They never silently fall back to an older week if current points are missing.
+For example, `/psek-nba-money gameweek:2` shows GW2's net results, while
+`/psek-nba-money season:true` shows the accumulated season total. Do not combine `gameweek`
+with `season:true`. Weekly results are provisional until every day is `data_checked`; only
+finalized weeks contribute to accumulated money. Before the first deadline, the default uses
+the first fantasy week; after the season ends, select a gameweek explicitly or use `season:true`.
 
 **Schedule selection:**
 
@@ -134,9 +142,9 @@ bot starts) makes the pool match it exactly.
 
 ```csv
 entry_id,from_gameweek,name
-31818,1,kids
-40823,2,beam
-12384,3,nut
+10001,2,alpha
+10002,2,bravo
+10003,2,charlie
 ```
 
 - `entry_id`: the number in the team's nbafantasy URL, e.g. `nbafantasy.nba.com/entry/31818`.
@@ -162,30 +170,58 @@ format. Docker mounts the whole `seed/` folder read-only, so any editor's save i
 
 ## Weekly pool
 
-`WEEKLY_BUY_IN` in `.env` (default `50`) is what each person pays into each gameweek's pool, from
-the week they joined. Each week's pool is split by that week's points, net of transfer costs:
+Everyone starts paying and playing in **GW2**: set each participant's `from_gameweek` to `2`
+in `seed/participants.csv`. Later joiners can start at a later week. `WEEKLY_BUY_IN` in `.env`
+(default `50`) is each person's weekly buy-in.
 
-| Place         | Share of the pool |
-| ------------- | ----------------- |
-| 1st           | 50%               |
-| 2nd           | 30%               |
-| 3rd           | 15%               |
-| 4th           | 5%                |
-| 5th and below | nothing           |
+Prize rules live in `seed/prizes.json` (`PRIZES_FILE` can override the path):
 
-- **Ties** average the prizes of the places they cover: two tied for 2nd each get
-  (30% + 15%) / 2 = 22.5%; two tied for 4th share its 5%.
-- **Fewer than 4 people**: the prizes in use scale up so the whole pool is paid; three people
-  get 52.6%, 31.6%, 15.8%.
-- **Rounding**: whole cents; leftover cents go to the largest remainders, so payouts always add
-  up to the pool exactly.
+```json
+[
+  {"from_gameweek": 2, "weights": [120, 70, 50, 30, 20, 10]}
+]
+```
 
-The split is the same every season and lives in one place, `PRIZES` in `services/prizes.py`, whose
-`settle()` docstring walks through these steps. Nothing is stored: every `/psek-nba-money`
-recomputes the weeks from the synced points, so a week counts toward the season once nbafantasy
-marks all its days final. The buy-in is saved when the season is created and never changes after
-that, because changing it would rewrite every past week. If `.env` later says something
-different, the bot logs a warning naming both values and keeps the season's.
+These numbers are **relative weights**, not fixed payouts or rounded percentages. Each place
+gets `weight / sum(weights)` of that week's pool, so exact shares always total 100%.
+With six people paying 50, the pool is 300:
+
+| Place | Share | Payout | Net after buy-in |
+|---|---|---|---|
+| 1st | 40% | 120.00 | +70.00 |
+| 2nd | 23⅓% | 70.00 | +20.00 |
+| 3rd | 16⅔% | 50.00 | 0.00 |
+| 4th | 10% | 30.00 | −20.00 |
+| 5th | 6⅔% | 20.00 | −30.00 |
+| 6th | 3⅓% | 10.00 | −40.00 |
+
+- **One weight per person:** weights must be positive whole numbers, in descending order
+  (equal weights are allowed). A seventh participant requires an explicit seven-place rule.
+  A count mismatch produces an explanation; the bot never invents missing prizes or truncates
+  the split. Pool and weekly money need the matching count; standings remain available.
+- **Ties:** average the prizes of the places they cover. Two tied for second in this pool
+  each receive `(70 + 50) / 2 = 60`.
+- **Rounding:** calculate with exact fractions, then round to cents using largest remainder.
+  Payouts always exhaust the pool. If a pool/split cannot give everyone at least one cent, the
+  bot explains the problem instead of silently paying someone zero.
+- **Changing the split:** append a rule with a later `from_gameweek` and its complete weight
+  list. The latest rule starting on or before a week applies to that week. Keep older rules
+  intact to preserve earlier results. Editing an earlier rule recalculates the weeks it covers.
+- **Loading:** money and pool read and validate the entire file on each request, so weight
+  edits need no restart. A missing or invalid file produces an explanation, not a fallback.
+  Docker mounts this file through the existing read-only `seed/` mount.
+
+Payouts are computed from synced points on every request; they are never stored. Season money
+sums finalized weekly net results from GW2 onward. Weeks before the first prize rule are excluded.
+The buy-in is saved when the season is created and never changes after that: changing `.env`
+does not rewrite an existing season's buy-in. The bot logs a warning if they differ.
+
+**Deploying this change:** keep `WEEKLY_BUY_IN=50` on Lightsail, update the code and
+`seed/prizes.json`, and set all six entries in the server's `seed/participants.csv` to start
+in GW2. The local private file has only four entries; add the two remaining entry IDs yourself.
+Restart the updated bot to register the new command options, then let its first sync apply
+participant changes. No database reset is required. The stored season buy-in must already be 50
+for the payouts in the table above; this update does not alter it.
 
 ## Program flow
 
@@ -221,6 +257,7 @@ sequenceDiagram
     participant Repository as repositories/points.py + participants.py
     participant DB as SQLite
     User->>Controller: /psek-nba-pool [gameweek]
+    Note over Controller: Load gameweek-effective rules from seed/prizes.json
     Controller->>Service: get_pool() with a short database session
     Service->>Repository: Read points and participant names
     Repository->>DB: Query stored data
@@ -232,7 +269,8 @@ sequenceDiagram
     Controller-->>User: Send Discord reply
 ```
 
-Standings, money, pool and charts read stored data; sync fetches updates from nbafantasy.
+Standings, money, pool and charts read stored points; sync fetches updates from nbafantasy.
+Money and pool also read the gameweek-effective prize rules from the seed file.
 Schedule is the exception: `controllers/schedule.py` acknowledges the request, then
 `services/schedule.py` uses the existing client to fetch the calendar and selected fixtures
 directly. It does not read or write the database. At startup, each controller's `handler()`
@@ -262,9 +300,10 @@ src/fantasy_bot/
   controllers/      one file per slash command: call a service, format the reply
                     team_emojis.py reuses and uploads Discord application emojis
   services/         one job each: standings, money, pool, chart, schedule, participants, sync;
-                    prizes.py is the 50/30/15/5 split, chart_drawing.py the PNGs
+                    prizes.py calculates payouts, prize_rules.py loads the weekly rules;
+                    gameweeks.py resolves weekly defaults, chart_drawing.py draws PNGs
                     team_logos.py selects missing NBA team logos
-  repositories/     SQL, one file per kind of data: points, participants, season, nbafantasy
+  repositories/     SQL, one file per kind of data: calendar, points, participants, season, nbafantasy
                     queries.py holds shared SQL expressions for participant names
   clients/          HTTP calls to nbafantasy and ESPN team-logo downloads
   database/         SQLAlchemy engine and sessions, table mappings, migrations

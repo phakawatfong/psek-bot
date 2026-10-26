@@ -1,6 +1,7 @@
 # Plan: simplify the bot to four commands, a participants file, and feature folders
 
-Status: done. Steps 1-5 (deleted what's going away; seed/participants.csv; feature folders;
+Status: done; fixed prizes and season-only summaries superseded by configurable-prizes.md.
+Steps 1-5 (deleted what's going away; seed/participants.csv; feature folders;
 SQLAlchemy; fixed 50/30/15/5 prizes; pool command, money by gameweek, chart by gameweek). The
 feature folders of section 3 were then replaced by folders by layer: see layer-folders.md. Decisions are recorded at the end. Step 2
 moved the file into a `seed/` folder (see README: Docker mounts the folder so editors that

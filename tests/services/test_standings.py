@@ -11,8 +11,8 @@ def named(team: str) -> ParticipantName:
     return ParticipantName(team, "manager")
 
 
-def test_standings_rank_every_team_by_latest_total(seeded: Session) -> None:
-    assert get_standings(seeded, SEASON) == [
+def test_standings_rank_eligible_teams_by_weekly_points(seeded: Session) -> None:
+    assert get_standings(seeded, SEASON, 1).rows == [
         StandingRow(1, named("Bravo"), 900),
         StandingRow(2, named("Alpha"), 700),
         StandingRow(3, named("Charlie"), 500),

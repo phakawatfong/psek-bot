@@ -6,6 +6,7 @@ services:
     environment:
       DB_PATH: /data/bot.db # inside the volume, whatever .env says
       PARTICIPANTS_FILE: /seed/participants.csv
+      PRIZES_FILE: /seed/prizes.json
     volumes:
       - bot-data:/data
       # The folder, not the file: editors that save by replacing the file would otherwise

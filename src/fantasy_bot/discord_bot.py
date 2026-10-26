@@ -27,7 +27,7 @@ class FantasyBot(discord.Client):
         self.guild = discord.Object(id=guild_id) if guild_id else None
         self.sync_loop = tasks.loop(minutes=league.sync_interval_minutes)(self.sync_once)
         self.team_icons: dict[str, str] = {}
-        register_all(self.tree, sessions, league.season_id, self.team_icons)
+        register_all(self.tree, sessions, league.season_id, self.team_icons, league.prizes_file)
 
     async def setup_hook(self) -> None:
         # Guild sync shows commands instantly; global sync can take a while to appear. It also

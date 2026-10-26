@@ -31,11 +31,14 @@ enforces who may import whom, so a failing layering test means the code is in th
 ## Conventions
 
 - **Units are integers.** Points are tenths (nbafantasy's unit: 905.5 pts = 9055). Money is
-  minor units (cents: 100.00 = 10000). Prize shares are basis points (50% = 5000). Payouts are
+  minor units (cents: 100.00 = 10000). Prize shares use positive integer weights from
+  `seed/prizes.json`, selected by effective gameweek. Payouts are
   computed exactly with `Fraction`, then rounded to whole cents by largest remainder, so they always
   add up to the pool. Format only at the edge, in `controllers/formatting.py`.
 - **Money is computed, never stored.** Every call recomputes the pools from the synced points
   (`v_gameweek_pool`). A gameweek counts once nbafantasy marks all its days `data_checked`.
+- **Prize rules:** require one positive weight per eligible participant. Add later-gameweek rules
+  when the split or participant count changes; never silently truncate or extrapolate prizes.
 - **The buy-in is fixed per season.** It is saved when the season row is created; changing it
   would rewrite past weeks. A new buy-in needs a new `SEASON_ID`.
 - **Schema:** the SQL files in `database/migrations/` are the source of truth (STRICT tables,

@@ -16,6 +16,7 @@ class LeagueConfig:
     weekly_buy_in_minor: int = 5000
     participants_file: Path = DEFAULT_PARTICIPANTS_FILE
     sync_interval_minutes: int = 10
+    prizes_file: Path = Path("seed/prizes.json")
 
     @classmethod
     def from_env(cls, env: Mapping[str, str]) -> "LeagueConfig":
@@ -24,6 +25,7 @@ class LeagueConfig:
             season_id=env["SEASON_ID"],
             weekly_buy_in_minor=_buy_in(env.get("WEEKLY_BUY_IN")),
             participants_file=Path(env.get("PARTICIPANTS_FILE") or DEFAULT_PARTICIPANTS_FILE),
+            prizes_file=Path(env.get("PRIZES_FILE") or "seed/prizes.json"),
         )
 
 

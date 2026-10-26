@@ -39,6 +39,21 @@ def signed(minor: int) -> str:
     return f"{'+' if minor >= 0 else ''}{money(minor)}"
 
 
-def percentages(split_bp: tuple[int, ...]) -> str:
-    """(5000, 3000, 1500, 500) -> "50/30/15/5"."""
-    return "/".join(f"{bp / 100:g}" for bp in split_bp)
+def split_reply(text: str) -> list[str]:
+    """Keep long season tables below Discord's limit, closing/reopening their code blocks."""
+    messages: list[str] = []
+    current = ""
+    in_code = False
+    for line in text.splitlines():
+        # Lines normally fit easily; even an unusually long external name must fit.
+        for start in range(0, max(len(line), 1), 1900):
+            part = line[start : start + 1900]
+            if len(current) + len(part) + 5 > 2000:
+                messages.append(current + ("\n```" if in_code else ""))
+                current = "```" if in_code else ""
+            current = f"{current}\n{part}" if current else part
+            if part == "```":
+                in_code = not in_code
+    if current:
+        messages.append(current)
+    return messages or ["No results."]

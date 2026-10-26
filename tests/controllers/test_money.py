@@ -20,20 +20,20 @@ def test_one_row_per_final_gameweek_one_column_per_person() -> None:
     )
     # GO joined in GW2, so GW1 shows "-"; its name is cut to fit and loses its backticks.
     assert format_money(season) == (
-        "**Money after 2 final gameweeks** (100.00 a week each, paid 50/30/15/5)\n"
+        "**Money after 2 final gameweeks** (100.00 a week each)\n"
         "```\n"
         "       jkslots  GO-GO Team\n"
         "GW1    +100.00           -\n"
         "GW2     +20.00      -80.00\n"
         "Total  +120.00      -80.00\n"
         "```\n"
-        "GW3 is not final yet: /psek-nba-pool shows it so far."
+        "GW3 is not final yet: /psek-nba-money gameweek:N shows provisional net."
     )
 
 
 def test_before_any_final_gameweek() -> None:
     assert format_money(SeasonMoney(10000, [], [], [1, 2])) == (
-        "**Money after 0 final gameweeks** (100.00 a week each, paid 50/30/15/5)\n"
+        "**Money after 0 final gameweeks** (100.00 a week each)\n"
         "No final gameweeks yet.\n"
-        "GW1, GW2 are not final yet: /psek-nba-pool shows it so far."
+        "GW1, GW2 are not final yet: /psek-nba-money gameweek:N shows provisional net."
     )

@@ -3,6 +3,8 @@
 Start here to see what the bot can do. Users type /psek-nba-<name>.
 """
 
+from pathlib import Path
+
 from discord import app_commands
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -16,18 +18,19 @@ def register_all(
     sessions: sessionmaker[Session],
     season_id: str,
     team_icons: dict[str, str] | None = None,
+    prizes_file: Path = Path("seed/prizes.json"),
 ) -> None:
     routes = [
         # (name, description shown in Discord, handler)
         (
             "standings",
-            "Every team, 1st to last, by season points",
+            "Gameweek points and ranking (default: current fantasy gameweek)",
             standings.handler(sessions, season_id),
         ),
         (
             "money",
             "Each person's win or loss per gameweek and in total",
-            money.handler(sessions, season_id),
+            money.handler(sessions, season_id, prizes_file),
         ),
         (
             "chart",
@@ -37,7 +40,7 @@ def register_all(
         (
             "pool",
             "One gameweek's pool: who put in what, and who wins what",
-            pool.handler(sessions, season_id),
+            pool.handler(sessions, season_id, prizes_file),
         ),
         (
             "schedule",
